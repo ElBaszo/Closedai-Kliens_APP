@@ -83,6 +83,7 @@
             btnWorstProducts.TabIndex = 2;
             btnWorstProducts.Text = "Worst Products";
             btnWorstProducts.UseVisualStyleBackColor = true;
+            btnWorstProducts.Click += btnWorstProducts_Click;
             // 
             // btnTopProducts
             // 

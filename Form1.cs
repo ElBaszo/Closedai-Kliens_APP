@@ -95,5 +95,42 @@ namespace ClosedAI
 
             dgvProducts.DataSource = topProducts;
         }
+
+        private async void btnWorstProducts_Click(object sender, EventArgs e)
+        {
+            if (allOrders == null) return;
+
+            ApiService api = new ApiService();
+
+            var validOrders = allOrders
+                .Where(x => x.IsPlaced)
+                .Where(x => !string.IsNullOrWhiteSpace(x.bvin))
+                .ToList();
+
+            List<OrderDetailItem> allItems = new List<OrderDetailItem>();
+
+            foreach (var order in validOrders)
+            {
+                var items = await api.GetOrderDetailsItems(order.bvin);
+                allItems.AddRange(items);
+            }
+
+            var worstProducts = allItems
+                .GroupBy(x => new { x.ProductSku, x.ProductName })
+                .Select(g => new
+                {
+                    ProductSku = g.Key.ProductSku,
+                    ProductName = g.Key.ProductName,
+                    TotalQuantitySold = g.Sum(x => x.Quantity),
+                    TotalRevenue = g.Sum(x => x.LineTotal),
+                    OrderCount = g.Count()
+                })
+                .OrderBy(x => x.TotalQuantitySold) 
+                .ThenBy(x => x.TotalRevenue)
+                .Take(10)
+                .ToList();
+
+            dgvProducts.DataSource = worstProducts;
+        }
     }
 }
