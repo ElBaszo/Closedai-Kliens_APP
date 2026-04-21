@@ -31,6 +31,7 @@
             panel1 = new Panel();
             btnRevenueStats = new Button();
             btnCategoryStats = new Button();
+            button1 = new Button();
             btnWorstProducts = new Button();
             btnTopProducts = new Button();
             dgvProducts = new DataGridView();
@@ -40,7 +41,8 @@
             btnApplyDiscount = new Button();
             btnResetPrices = new Button();
             label1 = new Label();
-            button1 = new Button();
+            btnAllProducts = new Button();
+            btnSearchProduct = new Button();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvProducts).BeginInit();
             SuspendLayout();
@@ -49,6 +51,7 @@
             // 
             panel1.Controls.Add(btnRevenueStats);
             panel1.Controls.Add(btnCategoryStats);
+            panel1.Controls.Add(button1);
             panel1.Controls.Add(btnWorstProducts);
             panel1.Controls.Add(btnTopProducts);
             panel1.Location = new Point(-2, 1);
@@ -73,6 +76,16 @@
             btnCategoryStats.TabIndex = 3;
             btnCategoryStats.Text = "Category Stats";
             btnCategoryStats.UseVisualStyleBackColor = true;
+            // 
+            // button1
+            // 
+            button1.Location = new Point(178, 137);
+            button1.Name = "button1";
+            button1.Size = new Size(148, 34);
+            button1.TabIndex = 8;
+            button1.Text = "Load Orders";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
             // 
             // btnWorstProducts
             // 
@@ -120,6 +133,7 @@
             btnPlus.TabIndex = 3;
             btnPlus.Text = "+";
             btnPlus.UseVisualStyleBackColor = true;
+            btnPlus.Click += btnPlus_Click;
             // 
             // btnMinus
             // 
@@ -129,6 +143,7 @@
             btnMinus.TabIndex = 4;
             btnMinus.Text = "-";
             btnMinus.UseVisualStyleBackColor = true;
+            btnMinus.Click += btnMinus_Click;
             // 
             // btnApplyDiscount
             // 
@@ -157,22 +172,33 @@
             label1.TabIndex = 7;
             label1.Text = "Search For Product:";
             // 
-            // button1
+            // btnAllProducts
             // 
-            button1.Location = new Point(1107, 539);
-            button1.Name = "button1";
-            button1.Size = new Size(112, 34);
-            button1.TabIndex = 8;
-            button1.Text = "button1";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += button1_Click;
+            btnAllProducts.Location = new Point(1079, 511);
+            btnAllProducts.Name = "btnAllProducts";
+            btnAllProducts.Size = new Size(122, 46);
+            btnAllProducts.TabIndex = 9;
+            btnAllProducts.Text = "All Products";
+            btnAllProducts.UseVisualStyleBackColor = true;
+            btnAllProducts.Click += btnAllProducts_Click;
+            // 
+            // btnSearchProduct
+            // 
+            btnSearchProduct.Location = new Point(1064, 581);
+            btnSearchProduct.Name = "btnSearchProduct";
+            btnSearchProduct.Size = new Size(146, 48);
+            btnSearchProduct.TabIndex = 10;
+            btnSearchProduct.Text = "Search Product";
+            btnSearchProduct.UseVisualStyleBackColor = true;
+            btnSearchProduct.Click += btnSearchProduct_Click_Click;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1318, 654);
-            Controls.Add(button1);
+            Controls.Add(btnSearchProduct);
+            Controls.Add(btnAllProducts);
             Controls.Add(label1);
             Controls.Add(btnResetPrices);
             Controls.Add(btnApplyDiscount);
@@ -205,5 +231,7 @@
         private Button btnResetPrices;
         private Label label1;
         private Button button1;
+        private Button btnAllProducts;
+        private Button btnSearchProduct;
     }
 }

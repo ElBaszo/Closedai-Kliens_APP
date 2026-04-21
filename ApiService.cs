@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Net.Http;
+using System.Text;
 using System.Text.Json;
+using System.Windows.Forms;
+
 
 namespace ClosedAI
 {
     public class ApiService
     {
+        private HttpClient client = new HttpClient();
         private string baseUrl = "http://40.67.243.80/DesktopModules/Hotcakes/API/rest/v1/";
         private string apiKey = "1-765e8551-eb7f-4bc2-bf9f-b28e56a1ebad";
 
@@ -28,6 +30,9 @@ namespace ClosedAI
                 };
 
                 var result = JsonSerializer.Deserialize<OrderResponse>(json, options);
+
+                if (result == null || result.Content == null)
+                    return new List<OrderItem>();
 
                 return result.Content;
             }
@@ -73,6 +78,171 @@ namespace ClosedAI
                     return result.Content.Items;
 
                 return new List<OrderDetailItem>();
+            }
+        }
+
+        public async Task<ProductInventoryResponse> GetProductInventory(string productId)
+        {
+            string url = $"{baseUrl}ProductInventoryFindForProduct?productBvin={productId}&key={apiKey}";
+
+            HttpResponseMessage response = await client.GetAsync(url);
+            string json = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                MessageBox.Show(json);
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
+            {
+                MessageBox.Show("A szerver nem JSON-t küldött vissza.");
+                return null;
+            }
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            return JsonSerializer.Deserialize<ProductInventoryResponse>(json, options);
+        }
+
+        public async Task<ProductInventoryResponse> UpdateProductInventory(ProductInventoryResponse inventory)
+        {
+            string url = $"{baseUrl}ProductInventoryUpdate?key={apiKey}";
+
+            string json = JsonSerializer.Serialize(inventory);
+            StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            HttpResponseMessage response = await client.PostAsync(url, content);
+            string responseJson = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                MessageBox.Show(responseJson);
+                return null;
+            }
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            return JsonSerializer.Deserialize<ProductInventoryResponse>(responseJson, options);
+        }
+
+        public async Task<List<ProductResponse>> GetAllProducts()
+        {
+            string url = $"{baseUrl}products?key={apiKey}";
+
+            HttpResponseMessage response = await client.GetAsync(url);
+            string json = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                MessageBox.Show(json);
+                return new List<ProductResponse>();
+            }
+
+            if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
+            {
+                MessageBox.Show("HIBA: Nem JSON jött vissza!");
+                return new List<ProductResponse>();
+            }
+
+            try
+            {
+                using (JsonDocument doc = JsonDocument.Parse(json))
+                {
+                    if (!doc.RootElement.TryGetProperty("Content", out JsonElement content))
+                    {
+                        MessageBox.Show("A JSON-ben nincs Content mező.");
+                        return new List<ProductResponse>();
+                    }
+
+                    // 1. ha a Content maga egy tömb
+                    if (content.ValueKind == JsonValueKind.Array)
+                    {
+                        var products = JsonSerializer.Deserialize<List<ProductResponse>>(content.GetRawText(),
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        return products ?? new List<ProductResponse>();
+                    }
+
+                    // 2. ha a Content objektum, és benne van Items
+                    if (content.ValueKind == JsonValueKind.Object && content.TryGetProperty("Items", out JsonElement items))
+                    {
+                        var products = JsonSerializer.Deserialize<List<ProductResponse>>(items.GetRawText(),
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        return products ?? new List<ProductResponse>();
+                    }
+
+                    // 3. ha a Content objektum, és benne van Products
+                    if (content.ValueKind == JsonValueKind.Object && content.TryGetProperty("Products", out JsonElement productsElement))
+                    {
+                        var products = JsonSerializer.Deserialize<List<ProductResponse>>(productsElement.GetRawText(),
+                            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                        return products ?? new List<ProductResponse>();
+                    }
+
+                    MessageBox.Show(content.GetRawText());
+                    return new List<ProductResponse>();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Hiba a termékek feldolgozásánál: " + ex.Message);
+                return new List<ProductResponse>();
+            }
+        }
+
+        public async Task<ProductResponse> GetProductBySku(string sku)
+        {
+            string encodedSku = Uri.EscapeDataString(sku);
+            string url = $"{baseUrl}ProductsFindBySku/{encodedSku}?key={apiKey}";
+
+            HttpResponseMessage response = await client.GetAsync(url);
+            string json = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                MessageBox.Show(json);
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
+            {
+                MessageBox.Show("Nem JSON jött vissza, hanem HTML hibapage.");
+                return null;
+            }
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            try
+            {
+                var wrappedResult = JsonSerializer.Deserialize<SingleProductResponse>(json, options);
+
+                if (wrappedResult != null && wrappedResult.Content != null)
+                    return wrappedResult.Content;
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<ProductResponse>(json, options);
+            }
+            catch
+            {
+                MessageBox.Show("A termék válasza nem értelmezhető.");
+                return null;
             }
         }
     }

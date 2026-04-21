@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
-
 
 namespace ClosedAI
 {
@@ -22,6 +17,9 @@ namespace ClosedAI
 
     public class OrderDetailItem
     {
+        [JsonPropertyName("ProductId")]
+        public string ProductId { get; set; }
+
         [JsonPropertyName("ProductName")]
         public string ProductName { get; set; }
 
