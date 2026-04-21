@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using System.Linq;
 using System.IO;
 using System.Globalization;
+using System.Collections.Generic;
 
 namespace ClosedAI
 {
@@ -58,28 +59,41 @@ namespace ClosedAI
             dgvProducts.DataSource = filtered;
         }
 
-        private void btnTopProducts_Click(object sender, EventArgs e)
+        private async void btnTopProducts_Click(object sender, EventArgs e)
         {
             if (allOrders == null) return;
 
-            var topSales = allOrders
-                .Where(x => x.IsPlaced == true)
-                .Where(x => !string.IsNullOrWhiteSpace(x.OrderNumber))
-                .Where(x => x.StatusName == "Complete")
-                .OrderByDescending(x => x.TotalGrand)
-                .Take(10)
-                .Select((x, index) => new
-                {
-                    Rank = index + 1,
-                    OrderNumber = x.OrderNumber,
-                    CustomerEmail = x.UserEmail,
-                    TotalValue = x.TotalGrand,
-                    Status = x.StatusName,
-                    OrderDate = ParseHotcakesDate(x.TimeOfOrderUtc).ToString("yyyy-MM-dd HH:mm")
-                })
+            ApiService api = new ApiService();
+
+            var validOrders = allOrders
+                .Where(x => x.IsPlaced)
+                .Where(x => !string.IsNullOrWhiteSpace(x.bvin))
                 .ToList();
 
-            dgvProducts.DataSource = topSales;
+            List<OrderDetailItem> allItems = new List<OrderDetailItem>();
+
+            foreach (var order in validOrders)
+            {
+                var items = await api.GetOrderDetailsItems(order.bvin);
+                allItems.AddRange(items);
+            }
+
+            var topProducts = allItems
+                .GroupBy(x => new { x.ProductSku, x.ProductName })
+                .Select(g => new
+                {
+                    ProductSku = g.Key.ProductSku,
+                    ProductName = g.Key.ProductName,
+                    TotalQuantitySold = g.Sum(x => x.Quantity),
+                    TotalRevenue = g.Sum(x => x.LineTotal),
+                    OrderCount = g.Count()
+                })
+                .OrderByDescending(x => x.TotalQuantitySold)
+                .ThenByDescending(x => x.TotalRevenue)
+                .Take(10)
+                .ToList();
+
+            dgvProducts.DataSource = topProducts;
         }
     }
 }

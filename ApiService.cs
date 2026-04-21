@@ -42,5 +42,38 @@ namespace ClosedAI
                 return await response.Content.ReadAsStringAsync();
             }
         }
+
+        public async Task<string> GetOrderDetails(string bvin)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                string url = baseUrl + "orders/" + bvin + "?key=" + apiKey;
+                var response = await client.GetAsync(url);
+                return await response.Content.ReadAsStringAsync();
+            }
+        }
+
+        public async Task<List<OrderDetailItem>> GetOrderDetailsItems(string bvin)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                string url = baseUrl + "orders/" + bvin + "?key=" + apiKey;
+
+                var response = await client.GetAsync(url);
+                string json = await response.Content.ReadAsStringAsync();
+
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+
+                var result = JsonSerializer.Deserialize<OrderDetailResponse>(json, options);
+
+                if (result != null && result.Content != null && result.Content.Items != null)
+                    return result.Content.Items;
+
+                return new List<OrderDetailItem>();
+            }
+        }
     }
 }
