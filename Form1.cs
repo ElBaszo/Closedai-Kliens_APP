@@ -14,17 +14,15 @@ namespace ClosedAI
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            
         }
-
 
         private async void button1_Click(object sender, EventArgs e)
         {
             ApiService api = new ApiService();
 
-            string result = await api.GetOrders();
+            var orders = await api.GetOrders();
 
-            MessageBox.Show(result);
+            dgvProducts.DataSource = orders;
         }
     }
     }
