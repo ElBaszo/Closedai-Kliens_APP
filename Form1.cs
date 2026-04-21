@@ -1,12 +1,13 @@
 using System;
 using System.Windows.Forms;
 using Microsoft.Data.SqlClient;
+using System.Linq;
 
 namespace ClosedAI
 {
     public partial class Form1 : Form
     {
-
+        private List<OrderItem> allOrders;
         public Form1()
         {
             InitializeComponent();
@@ -20,9 +21,25 @@ namespace ClosedAI
         {
             ApiService api = new ApiService();
 
-            var orders = await api.GetOrders();
+            allOrders = await api.GetOrders();
 
-            dgvProducts.DataSource = orders;
+            dgvProducts.DataSource = allOrders;
+        }
+
+        private void txtSearch_TextChanged(object sender, EventArgs e)
+        {
+            if (allOrders == null) return;
+
+            string search = txtSearch.Text.ToLower();
+
+            var filtered = allOrders
+                .Where(x =>
+                    (x.UserEmail != null && x.UserEmail.ToLower().Contains(search)) ||
+                    (x.OrderNumber != null && x.OrderNumber.ToLower().Contains(search))
+                )
+                .ToList();
+
+            dgvProducts.DataSource = filtered;
         }
     }
-    }
+}
