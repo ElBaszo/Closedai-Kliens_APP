@@ -6,7 +6,6 @@ namespace ClosedAI
 {
     public partial class Form1 : Form
     {
-        private string connectionString = @"Server=.\SQLEXPRESS;Database=DNN;Trusted_Connection=True;TrustServerCertificate=True;";
 
         public Form1()
         {
@@ -15,23 +14,17 @@ namespace ClosedAI
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            TestConnection();
+            
         }
 
-        private void TestConnection()
+
+        private async void button1_Click(object sender, EventArgs e)
         {
-            try
-            {
-                using (SqlConnection conn = new SqlConnection(connectionString))
-                {
-                    conn.Open();
-                    MessageBox.Show("Sikeres kapcsolódás!");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Hiba: " + ex.Message);
-            }
+            ApiService api = new ApiService();
+
+            string result = await api.GetOrders();
+
+            MessageBox.Show(result);
         }
     }
-}
+    }

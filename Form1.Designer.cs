@@ -29,10 +29,10 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
-            btnTopProducts = new Button();
-            btnWorstProducts = new Button();
-            btnCategoryStats = new Button();
             btnRevenueStats = new Button();
+            btnCategoryStats = new Button();
+            btnWorstProducts = new Button();
+            btnTopProducts = new Button();
             dgvProducts = new DataGridView();
             txtSearch = new TextBox();
             btnPlus = new Button();
@@ -40,6 +40,7 @@
             btnApplyDiscount = new Button();
             btnResetPrices = new Button();
             label1 = new Label();
+            button1 = new Button();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvProducts).BeginInit();
             SuspendLayout();
@@ -55,14 +56,23 @@
             panel1.Size = new Size(341, 653);
             panel1.TabIndex = 0;
             // 
-            // btnTopProducts
+            // btnRevenueStats
             // 
-            btnTopProducts.Location = new Point(69, 56);
-            btnTopProducts.Name = "btnTopProducts";
-            btnTopProducts.Size = new Size(153, 48);
-            btnTopProducts.TabIndex = 1;
-            btnTopProducts.Text = "Top Products";
-            btnTopProducts.UseVisualStyleBackColor = true;
+            btnRevenueStats.Location = new Point(69, 531);
+            btnRevenueStats.Name = "btnRevenueStats";
+            btnRevenueStats.Size = new Size(153, 48);
+            btnRevenueStats.TabIndex = 4;
+            btnRevenueStats.Text = "Revenue Stats";
+            btnRevenueStats.UseVisualStyleBackColor = true;
+            // 
+            // btnCategoryStats
+            // 
+            btnCategoryStats.Location = new Point(69, 371);
+            btnCategoryStats.Name = "btnCategoryStats";
+            btnCategoryStats.Size = new Size(153, 48);
+            btnCategoryStats.TabIndex = 3;
+            btnCategoryStats.Text = "Category Stats";
+            btnCategoryStats.UseVisualStyleBackColor = true;
             // 
             // btnWorstProducts
             // 
@@ -74,23 +84,14 @@
             btnWorstProducts.Text = "Worst Products";
             btnWorstProducts.UseVisualStyleBackColor = true;
             // 
-            // btnCategoryStats
+            // btnTopProducts
             // 
-            btnCategoryStats.Location = new Point(69, 371);
-            btnCategoryStats.Name = "btnCategoryStats";
-            btnCategoryStats.Size = new Size(153, 48);
-            btnCategoryStats.TabIndex = 3;
-            btnCategoryStats.Text = "Category Stats";
-            btnCategoryStats.UseVisualStyleBackColor = true;
-            // 
-            // btnRevenueStats
-            // 
-            btnRevenueStats.Location = new Point(69, 531);
-            btnRevenueStats.Name = "btnRevenueStats";
-            btnRevenueStats.Size = new Size(153, 48);
-            btnRevenueStats.TabIndex = 4;
-            btnRevenueStats.Text = "Revenue Stats";
-            btnRevenueStats.UseVisualStyleBackColor = true;
+            btnTopProducts.Location = new Point(69, 56);
+            btnTopProducts.Name = "btnTopProducts";
+            btnTopProducts.Size = new Size(153, 48);
+            btnTopProducts.TabIndex = 1;
+            btnTopProducts.Text = "Top Products";
+            btnTopProducts.UseVisualStyleBackColor = true;
             // 
             // dgvProducts
             // 
@@ -153,11 +154,22 @@
             label1.TabIndex = 7;
             label1.Text = "Search For Product:";
             // 
+            // button1
+            // 
+            button1.Location = new Point(1107, 539);
+            button1.Name = "button1";
+            button1.Size = new Size(112, 34);
+            button1.TabIndex = 8;
+            button1.Text = "button1";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1318, 654);
+            Controls.Add(button1);
             Controls.Add(label1);
             Controls.Add(btnResetPrices);
             Controls.Add(btnApplyDiscount);
@@ -189,5 +201,6 @@
         private Button btnApplyDiscount;
         private Button btnResetPrices;
         private Label label1;
+        private Button button1;
     }
 }
