@@ -32,5 +32,15 @@ namespace ClosedAI
                 return result.Content;
             }
         }
+
+        public async Task<string> GetRawOrdersJson()
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                string url = baseUrl + "orders?key=" + apiKey;
+                var response = await client.GetAsync(url);
+                return await response.Content.ReadAsStringAsync();
+            }
+        }
     }
 }

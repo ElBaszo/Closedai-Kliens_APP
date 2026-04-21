@@ -92,6 +92,7 @@
             btnTopProducts.TabIndex = 1;
             btnTopProducts.Text = "Top Products";
             btnTopProducts.UseVisualStyleBackColor = true;
+            btnTopProducts.Click += btnTopProducts_Click;
             // 
             // dgvProducts
             // 
