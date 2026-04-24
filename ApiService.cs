@@ -80,7 +80,7 @@ namespace ClosedAI
                 return new List<OrderDetailItem>();
             }
         }
-
+        /*
         public async Task<ProductInventoryResponse> GetProductInventory(string productId)
         {
             string url = $"{baseUrl}ProductInventoryFindForProduct?productBvin={productId}&key={apiKey}";
@@ -90,13 +90,13 @@ namespace ClosedAI
 
             if (!response.IsSuccessStatusCode)
             {
-                MessageBox.Show(json);
+                MessageBox.Show("Inventory lekérés hiba:\n" + json);
                 return null;
             }
 
             if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
             {
-                MessageBox.Show("A szerver nem JSON-t küldött vissza.");
+                MessageBox.Show("Az inventory lekérés nem JSON-t adott vissza.");
                 return null;
             }
 
@@ -105,9 +105,18 @@ namespace ClosedAI
                 PropertyNameCaseInsensitive = true
             };
 
-            return JsonSerializer.Deserialize<ProductInventoryResponse>(json, options);
+            try
+            {
+                return JsonSerializer.Deserialize<ProductInventoryResponse>(json, options);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Inventory parse hiba:\n" + ex.Message);
+                return null;
+            }
         }
-
+        */
+        /*
         public async Task<ProductInventoryResponse> UpdateProductInventory(ProductInventoryResponse inventory)
         {
             string url = $"{baseUrl}ProductInventoryUpdate?key={apiKey}";
@@ -120,7 +129,13 @@ namespace ClosedAI
 
             if (!response.IsSuccessStatusCode)
             {
-                MessageBox.Show(responseJson);
+                MessageBox.Show("Inventory mentés hiba:\n" + responseJson);
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(responseJson) || responseJson.TrimStart().StartsWith("<"))
+            {
+                MessageBox.Show("Az inventory mentés nem JSON-t adott vissza.");
                 return null;
             }
 
@@ -129,9 +144,17 @@ namespace ClosedAI
                 PropertyNameCaseInsensitive = true
             };
 
-            return JsonSerializer.Deserialize<ProductInventoryResponse>(responseJson, options);
+            try
+            {
+                return JsonSerializer.Deserialize<ProductInventoryResponse>(responseJson, options);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Inventory mentés parse hiba:\n" + ex.Message);
+                return null;
+            }
         }
-
+        */
         public async Task<List<ProductResponse>> GetAllProducts()
         {
             string url = $"{baseUrl}products?key={apiKey}";
@@ -245,5 +268,70 @@ namespace ClosedAI
                 return null;
             }
         }
+
+        public async Task<ProductInventoryResponse> GetInventoryByProductBvin(string productBvin)
+        {
+            string url = baseUrl + "productinventory?productBvin=" + productBvin + "&key=" + apiKey;
+
+            HttpResponseMessage response = await client.GetAsync(url);
+            string json = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                MessageBox.Show("Inventory lekérés hiba:\n" + json);
+                return null;
+            }
+
+            var options = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            try
+            {
+                var result = JsonSerializer.Deserialize<ProductInventoryListResponse>(json, options);
+
+                if (result != null && result.Content != null && result.Content.Count > 0)
+                    return result.Content[0];
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Inventory feldolgozási hiba:\n" + ex.Message);
+                return null;
+            }
+        }
+        public async Task<bool> SaveInventory(string inventoryBvin, string productBvin, string variantId, int quantity)
+        {
+            string url = baseUrl + "productinventory?key=" + apiKey;
+
+            var data = new
+            {
+                Bvin = inventoryBvin,
+                ProductBvin = productBvin,
+                VariantId = variantId,
+                QuantityOnHand = quantity,
+                QuantityReserved = 0,
+                LowStockPoint = 0,
+                OutOfStockPoint = 0
+            };
+
+            string json = JsonSerializer.Serialize(data);
+            StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            HttpResponseMessage response = await client.PostAsync(url, content);
+            string responseText = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                MessageBox.Show(responseText);
+                return false;
+            }
+
+            return true;
+        }
+
+
     }
 }

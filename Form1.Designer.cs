@@ -174,7 +174,7 @@
             // 
             // btnAllProducts
             // 
-            btnAllProducts.Location = new Point(1079, 511);
+            btnAllProducts.Location = new Point(1064, 496);
             btnAllProducts.Name = "btnAllProducts";
             btnAllProducts.Size = new Size(122, 46);
             btnAllProducts.TabIndex = 9;

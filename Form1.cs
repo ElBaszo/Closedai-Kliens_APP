@@ -158,23 +158,37 @@ namespace ClosedAI
 
             var selected = dgvProducts.CurrentRow.DataBoundItem as dynamic;
 
-            string productId = selected.ProductId;
-
-            ApiService api = new ApiService();
-
-            var inventory = await api.GetProductInventory(productId);
-
-            if (inventory == null)
+            if (selected == null)
             {
-                MessageBox.Show("Inventory not found!");
+                MessageBox.Show("Nincs kiválasztott termék.");
                 return;
             }
 
-            inventory.QuantityOnHand += 1;
+            string productBvin = selected.ProductId;
 
-            await api.UpdateProductInventory(inventory);
+            ApiService api = new ApiService();
 
-            MessageBox.Show("Inventory increased!");
+            var inventory = await api.GetInventoryByProductBvin(productBvin);
+
+            if (inventory == null)
+            {
+                MessageBox.Show("Ehhez a termékhez nincs inventory rekord.");
+                return;
+            }
+
+            int newQuantity = inventory.QuantityOnHand + 1;
+
+            bool success = await api.SaveInventory(
+                inventory.Bvin,
+                inventory.ProductBvin,
+                inventory.VariantId,
+                newQuantity
+            );
+
+            if (success)
+            {
+                MessageBox.Show("Inventory növelve.");
+            }
         }
 
         private async void btnMinus_Click(object sender, EventArgs e)
@@ -187,29 +201,43 @@ namespace ClosedAI
 
             var selected = dgvProducts.CurrentRow.DataBoundItem as dynamic;
 
-            string productId = selected.ProductId;
+            if (selected == null)
+            {
+                MessageBox.Show("Nincs kiválasztott termék.");
+                return;
+            }
+
+            string productBvin = selected.ProductId;
 
             ApiService api = new ApiService();
 
-            var inventory = await api.GetProductInventory(productId);
+            var inventory = await api.GetInventoryByProductBvin(productBvin);
 
             if (inventory == null)
             {
-                MessageBox.Show("Inventory not found!");
+                MessageBox.Show("Ehhez a termékhez nincs inventory rekord.");
                 return;
             }
 
             if (inventory.QuantityOnHand <= 0)
             {
-                MessageBox.Show("Inventory is already zero!");
+                MessageBox.Show("Nem lehet nulla alá menni.");
                 return;
             }
 
-            inventory.QuantityOnHand -= 1;
+            int newQuantity = inventory.QuantityOnHand - 1;
 
-            await api.UpdateProductInventory(inventory);
+            bool success = await api.SaveInventory(
+                inventory.Bvin,
+                inventory.ProductBvin,
+                inventory.VariantId,
+                newQuantity
+            );
 
-            MessageBox.Show("Inventory decreased!");
+            if (success)
+            {
+                MessageBox.Show("Inventory csökkentve.");
+            }
         }
 
         private async void btnAllProducts_Click(object sender, EventArgs e)
@@ -217,6 +245,12 @@ namespace ClosedAI
             ApiService api = new ApiService();
 
             var products = await api.GetAllProducts();
+
+            if (products == null || products.Count == 0)
+            {
+                MessageBox.Show("Nincs termék vagy hiba történt.");
+                return;
+            }
 
             var result = products.Select(p => new
             {
