@@ -43,6 +43,7 @@
             label1 = new Label();
             btnAllProducts = new Button();
             btnSearchProduct = new Button();
+            txtDiscount = new TextBox();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)dgvProducts).BeginInit();
             SuspendLayout();
@@ -127,7 +128,7 @@
             // 
             // btnPlus
             // 
-            btnPlus.Location = new Point(1015, 134);
+            btnPlus.Location = new Point(1003, 134);
             btnPlus.Name = "btnPlus";
             btnPlus.Size = new Size(74, 42);
             btnPlus.TabIndex = 3;
@@ -137,7 +138,7 @@
             // 
             // btnMinus
             // 
-            btnMinus.Location = new Point(1217, 134);
+            btnMinus.Location = new Point(1232, 134);
             btnMinus.Name = "btnMinus";
             btnMinus.Size = new Size(74, 42);
             btnMinus.TabIndex = 4;
@@ -147,16 +148,17 @@
             // 
             // btnApplyDiscount
             // 
-            btnApplyDiscount.Location = new Point(1034, 224);
+            btnApplyDiscount.Location = new Point(1034, 321);
             btnApplyDiscount.Name = "btnApplyDiscount";
             btnApplyDiscount.Size = new Size(239, 47);
             btnApplyDiscount.TabIndex = 5;
             btnApplyDiscount.Text = "Apply Discount";
             btnApplyDiscount.UseVisualStyleBackColor = true;
+            btnApplyDiscount.Click += btnApplyDiscount_Click;
             // 
             // btnResetPrices
             // 
-            btnResetPrices.Location = new Point(1034, 337);
+            btnResetPrices.Location = new Point(1034, 395);
             btnResetPrices.Name = "btnResetPrices";
             btnResetPrices.Size = new Size(239, 47);
             btnResetPrices.TabIndex = 6;
@@ -174,7 +176,7 @@
             // 
             // btnAllProducts
             // 
-            btnAllProducts.Location = new Point(1064, 496);
+            btnAllProducts.Location = new Point(1089, 132);
             btnAllProducts.Name = "btnAllProducts";
             btnAllProducts.Size = new Size(122, 46);
             btnAllProducts.TabIndex = 9;
@@ -192,11 +194,22 @@
             btnSearchProduct.UseVisualStyleBackColor = true;
             btnSearchProduct.Click += btnSearchProduct_Click_Click;
             // 
+            // txtDiscount
+            // 
+            txtDiscount.Location = new Point(1003, 284);
+            txtDiscount.Name = "txtDiscount";
+            txtDiscount.Size = new Size(314, 31);
+            txtDiscount.TabIndex = 11;
+            txtDiscount.Tag = "";
+            txtDiscount.Text = "Discount %";
+            txtDiscount.TextAlign = HorizontalAlignment.Center;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1318, 654);
+            Controls.Add(txtDiscount);
             Controls.Add(btnSearchProduct);
             Controls.Add(btnAllProducts);
             Controls.Add(label1);
@@ -233,5 +246,6 @@
         private Button button1;
         private Button btnAllProducts;
         private Button btnSearchProduct;
+        private TextBox txtDiscount;
     }
 }

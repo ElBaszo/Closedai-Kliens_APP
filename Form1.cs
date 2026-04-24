@@ -256,7 +256,8 @@ namespace ClosedAI
             {
                 ProductId = p.Bvin,
                 ProductSku = p.Sku,
-                ProductName = p.ProductName
+                ProductName = p.ProductName,
+                Price = p.SitePrice
             }).ToList();
 
             currentDisplayedProducts = result.Cast<dynamic>().ToList();
@@ -285,18 +286,58 @@ namespace ClosedAI
 
             var result = new List<dynamic>
             {
-                new
-                {
-                    ProductId = product.Bvin,
-                    ProductSku = product.Sku,
-                    ProductName = product.ProductName
-                }
+new
+{
+    ProductId = product.Bvin,
+    ProductSku = product.Sku,
+    ProductName = product.ProductName,
+    Price = product.SitePrice
+}
             };
 
             currentDisplayedProducts = result;
 
             dgvProducts.DataSource = null;
             dgvProducts.DataSource = currentDisplayedProducts;
+        }
+
+        private async void btnApplyDiscount_Click(object sender, EventArgs e)
+        {
+            if (dgvProducts.CurrentRow == null)
+            {
+                MessageBox.Show("Nincs kijelölt termék.");
+                return;
+            }
+
+            if (!decimal.TryParse(txtDiscount.Text, out decimal discountPercent))
+            {
+                MessageBox.Show("Adj meg érvényes százalékot.");
+                return;
+            }
+
+            if (discountPercent <= 0 || discountPercent >= 100)
+            {
+                MessageBox.Show("0 és 100 közötti érték kell.");
+                return;
+            }
+
+            var selected = dgvProducts.CurrentRow.DataBoundItem as dynamic;
+
+            decimal oldPrice = selected.Price;
+
+            decimal newPrice =
+                oldPrice * (1 - discountPercent / 100);
+
+            ApiService api = new ApiService();
+            bool success = await api.UpdateProductPrice(
+                selected.ProductId,
+                newPrice
+            );
+
+            if (success)
+            {
+                MessageBox.Show("Discount alkalmazva.");
+            }
         }
     }
 }

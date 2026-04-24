@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Windows.Forms;
+using System.Text.Json.Nodes;
 
 
 namespace ClosedAI
@@ -332,6 +333,54 @@ namespace ClosedAI
             return true;
         }
 
+        public async Task<bool> UpdateProductPrice(string productBvin, decimal newPrice)
+        {
+            string getUrl = baseUrl + "products?key=" + apiKey;
 
+            HttpResponseMessage getResponse = await client.GetAsync(getUrl);
+            string getJson = await getResponse.Content.ReadAsStringAsync();
+
+            JsonNode root = JsonNode.Parse(getJson);
+
+            JsonArray products = root["Content"]["Products"].AsArray();
+
+            JsonObject selectedProduct = null;
+
+            foreach (JsonNode item in products)
+            {
+                if (item["Bvin"] != null && item["Bvin"].ToString() == productBvin)
+                {
+                    selectedProduct = item.AsObject();
+                    break;
+                }
+            }
+
+            if (selectedProduct == null)
+            {
+                MessageBox.Show("Nem található a kiválasztott termék.");
+                return false;
+            }
+
+            selectedProduct["SitePrice"] = newPrice;
+            selectedProduct["ListPrice"] = newPrice;
+            selectedProduct["CreationDateUtc"] = "2026-03-15T00:00:00";
+
+            string postUrl = baseUrl + "products?key=" + apiKey;
+
+            string postJson = selectedProduct.ToJsonString();
+
+            StringContent content = new StringContent(postJson, Encoding.UTF8, "application/json");
+
+            HttpResponseMessage postResponse = await client.PostAsync(postUrl, content);
+            string responseText = await postResponse.Content.ReadAsStringAsync();
+
+            if (responseText.Contains("EXCEPTION"))
+            {
+                MessageBox.Show("API hiba:\n" + responseText);
+                return false;
+            }
+
+            return true;
+        }
     }
 }

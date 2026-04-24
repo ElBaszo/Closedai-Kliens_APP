@@ -12,6 +12,12 @@ namespace ClosedAI
 
         [JsonPropertyName("ProductName")]
         public string ProductName { get; set; }
+
+        public decimal SitePrice { get; set; }
+
+        public string CreationDateUtc { get; set; }
+
+        public decimal ListPrice { get; set; }
     }
 
     public class SingleProductResponse
