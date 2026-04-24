@@ -19,6 +19,8 @@ namespace ClosedAI
         {
             dtpFrom.Value = DateTime.Today.AddDays(-30);
             dtpTo.Value = DateTime.Today;
+            dgvProducts.MultiSelect = true;
+            dgvProducts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         }
 
 
@@ -153,94 +155,125 @@ namespace ClosedAI
 
         private async void btnPlus_Click(object sender, EventArgs e)
         {
-            if (dgvProducts.CurrentRow == null)
+            var productIds = new List<string>();
+
+            foreach (DataGridViewRow row in dgvProducts.Rows)
+            {
+                bool rowIsSelected = row.Selected;
+
+                foreach (DataGridViewCell cell in row.Cells)
+                {
+                    if (cell.Selected)
+                    {
+                        rowIsSelected = true;
+                        break;
+                    }
+                }
+
+                if (rowIsSelected && row.Cells["ProductId"].Value != null)
+                {
+                    string productId = row.Cells["ProductId"].Value.ToString();
+
+                    if (!productIds.Contains(productId))
+                    {
+                        productIds.Add(productId);
+                    }
+                }
+            }
+
+            if (productIds.Count == 0)
             {
                 MessageBox.Show("Nincs kijelölt termék.");
                 return;
             }
 
-            var selected = dgvProducts.CurrentRow.DataBoundItem as dynamic;
-
-            if (selected == null)
-            {
-                MessageBox.Show("Nincs kiválasztott termék.");
-                return;
-            }
-
-            string productBvin = selected.ProductId;
-
             ApiService api = new ApiService();
+            int successCount = 0;
 
-            var inventory = await api.GetInventoryByProductBvin(productBvin);
-
-            if (inventory == null)
+            foreach (string productBvin in productIds)
             {
-                MessageBox.Show("Ehhez a termékhez nincs inventory rekord.");
-                return;
+                var inventory = await api.GetInventoryByProductBvin(productBvin);
+
+                if (inventory == null)
+                    continue;
+
+                int newQuantity = inventory.QuantityOnHand + 1;
+
+                bool success = await api.SaveInventory(
+                    inventory.Bvin,
+                    inventory.ProductBvin,
+                    inventory.VariantId,
+                    newQuantity
+                );
+
+                if (success)
+                    successCount++;
             }
 
-            int newQuantity = inventory.QuantityOnHand + 1;
-
-            bool success = await api.SaveInventory(
-                inventory.Bvin,
-                inventory.ProductBvin,
-                inventory.VariantId,
-                newQuantity
-            );
-
-            if (success)
-            {
-                MessageBox.Show("Inventory növelve.");
-            }
+            MessageBox.Show(successCount + " különböző termék inventoryja növelve.");
         }
 
         private async void btnMinus_Click(object sender, EventArgs e)
         {
-            if (dgvProducts.CurrentRow == null)
+            var productIds = new List<string>();
+
+            foreach (DataGridViewRow row in dgvProducts.Rows)
+            {
+                bool rowIsSelected = row.Selected;
+
+                foreach (DataGridViewCell cell in row.Cells)
+                {
+                    if (cell.Selected)
+                    {
+                        rowIsSelected = true;
+                        break;
+                    }
+                }
+
+                if (rowIsSelected && row.Cells["ProductId"].Value != null)
+                {
+                    string productId = row.Cells["ProductId"].Value.ToString();
+
+                    if (!productIds.Contains(productId))
+                    {
+                        productIds.Add(productId);
+                    }
+                }
+            }
+
+            if (productIds.Count == 0)
             {
                 MessageBox.Show("Nincs kijelölt termék.");
                 return;
             }
 
-            var selected = dgvProducts.CurrentRow.DataBoundItem as dynamic;
-
-            if (selected == null)
-            {
-                MessageBox.Show("Nincs kiválasztott termék.");
-                return;
-            }
-
-            string productBvin = selected.ProductId;
-
             ApiService api = new ApiService();
+            int successCount = 0;
 
-            var inventory = await api.GetInventoryByProductBvin(productBvin);
-
-            if (inventory == null)
+            foreach (string productBvin in productIds)
             {
-                MessageBox.Show("Ehhez a termékhez nincs inventory rekord.");
-                return;
+                var inventory = await api.GetInventoryByProductBvin(productBvin);
+
+                if (inventory == null)
+                    continue;
+
+                if (inventory.QuantityOnHand <= 0)
+                    continue;
+
+                int newQuantity = inventory.QuantityOnHand - 1;
+
+                bool success = await api.SaveInventory(
+                    inventory.Bvin,
+                    inventory.ProductBvin,
+                    inventory.VariantId,
+                    newQuantity
+                );
+
+                if (success)
+                    successCount++;
             }
 
-            if (inventory.QuantityOnHand <= 0)
-            {
-                MessageBox.Show("Nem lehet nulla alá menni.");
-                return;
-            }
-
-            int newQuantity = inventory.QuantityOnHand - 1;
-
-            bool success = await api.SaveInventory(
-                inventory.Bvin,
-                inventory.ProductBvin,
-                inventory.VariantId,
-                newQuantity
-            );
-
-            if (success)
-            {
-                MessageBox.Show("Inventory csökkentve.");
-            }
+            MessageBox.Show(successCount + " különböző termék inventoryja csökkentve.");
         }
 
         private async void btnAllProducts_Click(object sender, EventArgs e)
@@ -312,41 +345,84 @@ namespace ClosedAI
 
         private async void btnApplyDiscount_Click(object sender, EventArgs e)
         {
-            if (dgvProducts.CurrentRow == null)
+            if (!decimal.TryParse(txtDiscount.Text, out decimal discountPercent))
+            {
+                MessageBox.Show("Adj meg érvényes kedvezmény %-ot.");
+                return;
+            }
+
+            var productIds = new List<string>();
+
+            foreach (DataGridViewRow row in dgvProducts.Rows)
+            {
+                bool rowIsSelected = row.Selected;
+
+                foreach (DataGridViewCell cell in row.Cells)
+                {
+                    if (cell.Selected)
+                    {
+                        rowIsSelected = true;
+                        break;
+                    }
+                }
+
+                if (rowIsSelected &&
+                    row.Cells["ProductId"].Value != null)
+                {
+                    string productId =
+                        row.Cells["ProductId"].Value.ToString();
+
+                    if (!productIds.Contains(productId))
+                    {
+                        productIds.Add(productId);
+                    }
+                }
+            }
+
+            if (productIds.Count == 0)
             {
                 MessageBox.Show("Nincs kijelölt termék.");
                 return;
             }
 
-            if (!decimal.TryParse(txtDiscount.Text, out decimal discountPercent))
-            {
-                MessageBox.Show("Adj meg érvényes százalékot.");
-                return;
-            }
-
-            if (discountPercent <= 0 || discountPercent >= 100)
-            {
-                MessageBox.Show("0 és 100 közötti érték kell.");
-                return;
-            }
-
-            var selected = dgvProducts.CurrentRow.DataBoundItem as dynamic;
-
-            decimal oldPrice = selected.Price;
-
-            decimal newPrice =
-                oldPrice * (1 - discountPercent / 100);
-
             ApiService api = new ApiService();
-            bool success = await api.UpdateProductPrice(
-                selected.ProductId,
-                newPrice
-            );
 
-            if (success)
+            int successCount = 0;
+
+            foreach (string productId in productIds)
             {
-                MessageBox.Show("Discount alkalmazva.");
+                DataGridViewRow row = dgvProducts.Rows
+                    .Cast<DataGridViewRow>()
+                    .FirstOrDefault(r =>
+                        r.Cells["ProductId"].Value != null &&
+                        r.Cells["ProductId"].Value.ToString() == productId);
+
+                if (row == null)
+                    continue;
+
+                decimal oldPrice =
+                    Convert.ToDecimal(
+                        row.Cells["Price"].Value
+                    );
+
+                decimal newPrice =
+                    oldPrice *
+                    (1 - discountPercent / 100);
+
+                bool success =
+                    await api.UpdateProductPrice(
+                        productId,
+                        newPrice
+                    );
+
+                if (success)
+                    successCount++;
             }
+
+            MessageBox.Show(
+                successCount +
+                " termékre kedvezmény alkalmazva."
+            );
         }
 
         private async void btnCategoryStats_Click(object sender, EventArgs e)

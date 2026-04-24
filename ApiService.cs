@@ -277,31 +277,21 @@ namespace ClosedAI
             HttpResponseMessage response = await client.GetAsync(url);
             string json = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
-            {
-                MessageBox.Show("Inventory lekérés hiba:\n" + json);
+            if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
                 return null;
-            }
 
             var options = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             };
 
-            try
-            {
-                var result = JsonSerializer.Deserialize<ProductInventoryListResponse>(json, options);
+            var result = JsonSerializer.Deserialize<ProductInventoryListResponse>(json, options);
 
-                if (result != null && result.Content != null && result.Content.Count > 0)
-                    return result.Content[0];
+            if (result == null || result.Content == null)
+                return null;
 
-                return null;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Inventory feldolgozási hiba:\n" + ex.Message);
-                return null;
-            }
+            return result.Content
+                .FirstOrDefault(x => x.ProductBvin == productBvin);
         }
         public async Task<bool> SaveInventory(string inventoryBvin, string productBvin, string variantId, int quantity)
         {
