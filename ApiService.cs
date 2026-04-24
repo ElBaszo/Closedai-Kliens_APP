@@ -382,5 +382,41 @@ namespace ClosedAI
 
             return true;
         }
+
+        public async Task<string> GetCategoryForProduct(string productBvin)
+        {
+            string url =
+                baseUrl +
+                "categories?productBvin=" +
+                productBvin +
+                "&key=" +
+                apiKey;
+
+            HttpResponseMessage response =
+                await client.GetAsync(url);
+
+            string json =
+                await response.Content.ReadAsStringAsync();
+
+            if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
+            {
+                return "Unknown";
+            }
+
+            JsonDocument doc =
+                JsonDocument.Parse(json);
+
+            if (doc.RootElement
+                  .GetProperty("Content")
+                  .GetArrayLength() > 0)
+            {
+                return doc.RootElement
+                    .GetProperty("Content")[0]
+                    .GetProperty("Name")
+                    .GetString();
+            }
+
+            return "Unknown";
+        }
     }
 }

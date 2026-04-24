@@ -29,6 +29,10 @@
         private void InitializeComponent()
         {
             panel1 = new Panel();
+            label3 = new Label();
+            label2 = new Label();
+            dtpTo = new DateTimePicker();
+            dtpFrom = new DateTimePicker();
             btnRevenueStats = new Button();
             btnCategoryStats = new Button();
             button1 = new Button();
@@ -39,7 +43,6 @@
             btnPlus = new Button();
             btnMinus = new Button();
             btnApplyDiscount = new Button();
-            btnResetPrices = new Button();
             label1 = new Label();
             btnAllProducts = new Button();
             btnSearchProduct = new Button();
@@ -50,6 +53,10 @@
             // 
             // panel1
             // 
+            panel1.Controls.Add(label3);
+            panel1.Controls.Add(label2);
+            panel1.Controls.Add(dtpTo);
+            panel1.Controls.Add(dtpFrom);
             panel1.Controls.Add(btnRevenueStats);
             panel1.Controls.Add(btnCategoryStats);
             panel1.Controls.Add(button1);
@@ -60,27 +67,63 @@
             panel1.Size = new Size(341, 653);
             panel1.TabIndex = 0;
             // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.Location = new Point(14, 371);
+            label3.Name = "label3";
+            label3.Size = new Size(34, 25);
+            label3.TabIndex = 13;
+            label3.Text = "To:";
+            // 
+            // label2
+            // 
+            label2.AutoSize = true;
+            label2.Location = new Point(14, 326);
+            label2.Name = "label2";
+            label2.Size = new Size(58, 25);
+            label2.TabIndex = 12;
+            label2.Text = "From:";
+            // 
+            // dtpTo
+            // 
+            dtpTo.Format = DateTimePickerFormat.Short;
+            dtpTo.Location = new Point(94, 366);
+            dtpTo.Name = "dtpTo";
+            dtpTo.Size = new Size(165, 31);
+            dtpTo.TabIndex = 10;
+            // 
+            // dtpFrom
+            // 
+            dtpFrom.Format = DateTimePickerFormat.Short;
+            dtpFrom.Location = new Point(94, 320);
+            dtpFrom.Name = "dtpFrom";
+            dtpFrom.Size = new Size(165, 31);
+            dtpFrom.TabIndex = 9;
+            // 
             // btnRevenueStats
             // 
-            btnRevenueStats.Location = new Point(69, 531);
+            btnRevenueStats.Location = new Point(178, 419);
             btnRevenueStats.Name = "btnRevenueStats";
             btnRevenueStats.Size = new Size(153, 48);
             btnRevenueStats.TabIndex = 4;
             btnRevenueStats.Text = "Revenue Stats";
             btnRevenueStats.UseVisualStyleBackColor = true;
+            btnRevenueStats.Click += btnRevenueStats_Click;
             // 
             // btnCategoryStats
             // 
-            btnCategoryStats.Location = new Point(69, 371);
+            btnCategoryStats.Location = new Point(0, 419);
             btnCategoryStats.Name = "btnCategoryStats";
             btnCategoryStats.Size = new Size(153, 48);
             btnCategoryStats.TabIndex = 3;
             btnCategoryStats.Text = "Category Stats";
             btnCategoryStats.UseVisualStyleBackColor = true;
+            btnCategoryStats.Click += btnCategoryStats_Click;
             // 
             // button1
             // 
-            button1.Location = new Point(178, 137);
+            button1.Location = new Point(178, 73);
             button1.Name = "button1";
             button1.Size = new Size(148, 34);
             button1.TabIndex = 8;
@@ -91,7 +134,7 @@
             // btnWorstProducts
             // 
             btnWorstProducts.AutoEllipsis = true;
-            btnWorstProducts.Location = new Point(69, 213);
+            btnWorstProducts.Location = new Point(69, 133);
             btnWorstProducts.Name = "btnWorstProducts";
             btnWorstProducts.Size = new Size(153, 48);
             btnWorstProducts.TabIndex = 2;
@@ -101,7 +144,7 @@
             // 
             // btnTopProducts
             // 
-            btnTopProducts.Location = new Point(69, 56);
+            btnTopProducts.Location = new Point(69, 3);
             btnTopProducts.Name = "btnTopProducts";
             btnTopProducts.Size = new Size(153, 48);
             btnTopProducts.TabIndex = 1;
@@ -120,7 +163,7 @@
             // 
             // txtSearch
             // 
-            txtSearch.Location = new Point(1003, 74);
+            txtSearch.Location = new Point(1000, 44);
             txtSearch.Name = "txtSearch";
             txtSearch.Size = new Size(314, 31);
             txtSearch.TabIndex = 2;
@@ -128,7 +171,7 @@
             // 
             // btnPlus
             // 
-            btnPlus.Location = new Point(1003, 134);
+            btnPlus.Location = new Point(1000, 187);
             btnPlus.Name = "btnPlus";
             btnPlus.Size = new Size(74, 42);
             btnPlus.TabIndex = 3;
@@ -138,7 +181,7 @@
             // 
             // btnMinus
             // 
-            btnMinus.Location = new Point(1232, 134);
+            btnMinus.Location = new Point(1229, 187);
             btnMinus.Name = "btnMinus";
             btnMinus.Size = new Size(74, 42);
             btnMinus.TabIndex = 4;
@@ -148,7 +191,7 @@
             // 
             // btnApplyDiscount
             // 
-            btnApplyDiscount.Location = new Point(1034, 321);
+            btnApplyDiscount.Location = new Point(1046, 373);
             btnApplyDiscount.Name = "btnApplyDiscount";
             btnApplyDiscount.Size = new Size(239, 47);
             btnApplyDiscount.TabIndex = 5;
@@ -156,27 +199,18 @@
             btnApplyDiscount.UseVisualStyleBackColor = true;
             btnApplyDiscount.Click += btnApplyDiscount_Click;
             // 
-            // btnResetPrices
-            // 
-            btnResetPrices.Location = new Point(1034, 395);
-            btnResetPrices.Name = "btnResetPrices";
-            btnResetPrices.Size = new Size(239, 47);
-            btnResetPrices.TabIndex = 6;
-            btnResetPrices.Text = "Revert Discount";
-            btnResetPrices.UseVisualStyleBackColor = true;
-            // 
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(1064, 26);
+            label1.Location = new Point(1046, 16);
             label1.Name = "label1";
-            label1.Size = new Size(166, 25);
+            label1.Size = new Size(213, 25);
             label1.TabIndex = 7;
-            label1.Text = "Search For Product:";
+            label1.Text = "Search For Product (SKU):";
             // 
             // btnAllProducts
             // 
-            btnAllProducts.Location = new Point(1089, 132);
+            btnAllProducts.Location = new Point(1086, 185);
             btnAllProducts.Name = "btnAllProducts";
             btnAllProducts.Size = new Size(122, 46);
             btnAllProducts.TabIndex = 9;
@@ -186,7 +220,7 @@
             // 
             // btnSearchProduct
             // 
-            btnSearchProduct.Location = new Point(1064, 581);
+            btnSearchProduct.Location = new Point(1062, 81);
             btnSearchProduct.Name = "btnSearchProduct";
             btnSearchProduct.Size = new Size(146, 48);
             btnSearchProduct.TabIndex = 10;
@@ -196,7 +230,7 @@
             // 
             // txtDiscount
             // 
-            txtDiscount.Location = new Point(1003, 284);
+            txtDiscount.Location = new Point(1003, 321);
             txtDiscount.Name = "txtDiscount";
             txtDiscount.Size = new Size(314, 31);
             txtDiscount.TabIndex = 11;
@@ -213,7 +247,6 @@
             Controls.Add(btnSearchProduct);
             Controls.Add(btnAllProducts);
             Controls.Add(label1);
-            Controls.Add(btnResetPrices);
             Controls.Add(btnApplyDiscount);
             Controls.Add(btnMinus);
             Controls.Add(btnPlus);
@@ -224,6 +257,7 @@
             Text = "Form1";
             Load += Form1_Load;
             panel1.ResumeLayout(false);
+            panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)dgvProducts).EndInit();
             ResumeLayout(false);
             PerformLayout();
@@ -241,11 +275,14 @@
         private Button btnPlus;
         private Button btnMinus;
         private Button btnApplyDiscount;
-        private Button btnResetPrices;
         private Label label1;
         private Button button1;
         private Button btnAllProducts;
         private Button btnSearchProduct;
         private TextBox txtDiscount;
+        private Label label2;
+        private DateTimePicker dtpTo;
+        private DateTimePicker dtpFrom;
+        private Label label3;
     }
 }

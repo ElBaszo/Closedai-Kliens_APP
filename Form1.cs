@@ -17,7 +17,10 @@ namespace ClosedAI
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            dtpFrom.Value = DateTime.Today.AddDays(-30);
+            dtpTo.Value = DateTime.Today;
         }
+
 
         private DateTime ParseHotcakesDate(string hotcakesDate)
         {
@@ -274,26 +277,32 @@ namespace ClosedAI
                 return;
             }
 
+            string searchSku = txtSearch.Text.Trim().ToLower();
+
             ApiService api = new ApiService();
 
-            var product = await api.GetProductBySku(txtSearch.Text.Trim());
+            var products = await api.GetAllProducts();
+
+            var product = products
+                .FirstOrDefault(p => p.Sku != null &&
+                                     p.Sku.ToLower() == searchSku);
 
             if (product == null)
             {
-                MessageBox.Show("Nincs ilyen termék.");
+                MessageBox.Show("Nincs ilyen SKU-jú termék.");
                 return;
             }
 
             var result = new List<dynamic>
-            {
-new
-{
-    ProductId = product.Bvin,
-    ProductSku = product.Sku,
-    ProductName = product.ProductName,
-    Price = product.SitePrice
-}
-            };
+    {
+        new
+        {
+            ProductId = product.Bvin,
+            ProductSku = product.Sku,
+            ProductName = product.ProductName,
+            Price = product.SitePrice
+        }
+    };
 
             currentDisplayedProducts = result;
 
@@ -338,6 +347,214 @@ new
             {
                 MessageBox.Show("Discount alkalmazva.");
             }
+        }
+
+        private async void btnCategoryStats_Click(object sender, EventArgs e)
+        {
+            ApiService api = new ApiService();
+
+            if (allOrders == null)
+                allOrders = await api.GetOrders();
+
+            DateTime fromDate = dtpFrom.Value.Date;
+            DateTime toDate = dtpTo.Value.Date.AddDays(1);
+
+            var filteredOrders =
+                allOrders
+                .Where(o => o.IsPlaced)
+                .Where(o =>
+                {
+                    DateTime d =
+                        ParseHotcakesDate(
+                           o.TimeOfOrderUtc);
+
+                    return d >= fromDate &&
+                           d < toDate;
+                })
+                .ToList();
+
+            List<dynamic> categoryRows =
+                new List<dynamic>();
+
+            List<OrderDetailItem> allItems =
+                new List<OrderDetailItem>();
+
+            foreach (var order in filteredOrders)
+            {
+                var items =
+                 await api.GetOrderDetailsItems(order.bvin);
+
+                allItems.AddRange(items);
+            }
+
+            var grouped =
+                allItems
+                .GroupBy(x => x.ProductId);
+
+            var stats =
+                new List<dynamic>();
+
+            foreach (var g in grouped)
+            {
+                string productName = g.First().ProductName.ToLower();
+
+                string category = "Other";
+
+                if (productName.Contains("ferrari"))
+                    category = "Ferrari";
+                else if (productName.Contains("porsche"))
+                    category = "Porsche";
+                else if (productName.Contains("mercedes"))
+                    category = "Mercedes";
+                else if (productName.Contains("lamborghini"))
+                    category = "Lamborghini";
+                else if (productName.Contains("bmw"))
+                    category = "BMW";
+                else if (productName.Contains("mclaren"))
+                    category = "McLaren";
+
+                stats.Add(new
+                {
+                    Category = category,
+                    Quantity = g.Sum(x => x.Quantity),
+                    Revenue = g.Sum(x => x.LineTotal)
+                });
+            }
+
+            var finalStats =
+                stats
+                .GroupBy(x => x.Category)
+                .Select(g => new
+                {
+                    Category = g.Key,
+                    TotalUnits =
+                        g.Sum(x => (int)x.Quantity),
+
+                    TotalRevenue =
+                        g.Sum(x => (decimal)x.Revenue),
+
+                    AvgRevenuePerUnit =
+                        g.Sum(x => (decimal)x.Revenue) /
+                        g.Sum(x => (int)x.Quantity)
+                })
+                .OrderByDescending(x => x.TotalRevenue)
+                .ToList();
+
+            dgvProducts.DataSource = null;
+            dgvProducts.DataSource = finalStats;
+            dgvProducts.Columns["TotalRevenue"].DefaultCellStyle.Format = "N0";
+            dgvProducts.Columns["AvgRevenuePerUnit"].DefaultCellStyle.Format = "N0";
+        }
+
+        private async void btnRevenueStats_Click(object sender, EventArgs e)
+        {
+            ApiService api = new ApiService();
+
+            if (allOrders == null)
+            {
+                allOrders = await api.GetOrders();
+            }
+
+            DateTime fromDate = dtpFrom.Value.Date;
+            DateTime toDate = dtpTo.Value.Date.AddDays(1);
+
+            var filteredOrders = allOrders
+                .Where(o => o.IsPlaced)
+                .Where(o =>
+                {
+                    DateTime orderDate = ParseHotcakesDate(o.TimeOfOrderUtc);
+                    return orderDate >= fromDate && orderDate < toDate;
+                })
+                .ToList();
+
+            if (filteredOrders.Count == 0)
+            {
+                MessageBox.Show("Nincs rendelés ebben az intervallumban.");
+                return;
+            }
+
+            List<OrderDetailItem> allItems = new List<OrderDetailItem>();
+
+            foreach (var order in filteredOrders)
+            {
+                var items = await api.GetOrderDetailsItems(order.bvin);
+                allItems.AddRange(items);
+            }
+
+            if (allItems.Count == 0)
+            {
+                MessageBox.Show("Nincs termékadat a rendelésekben.");
+                return;
+            }
+
+            decimal totalRevenue = allItems.Sum(x => x.LineTotal);
+            int totalOrders = filteredOrders.Count;
+            int totalUnitsSold = allItems.Sum(x => x.Quantity);
+
+            decimal averageOrderValue = totalRevenue / totalOrders;
+            decimal averageRevenuePerUnit = totalRevenue / totalUnitsSold;
+
+            var bestSellingProduct = allItems
+                .GroupBy(x => x.ProductName)
+                .Select(g => new
+                {
+                    ProductName = g.Key,
+                    Quantity = g.Sum(x => x.Quantity)
+                })
+                .OrderByDescending(x => x.Quantity)
+                .First();
+
+            var topRevenueProduct = allItems
+                .GroupBy(x => x.ProductName)
+                .Select(g => new
+                {
+                    ProductName = g.Key,
+                    Revenue = g.Sum(x => x.LineTotal)
+                })
+                .OrderByDescending(x => x.Revenue)
+                .First();
+
+            var result = new List<dynamic>
+    {
+        new
+        {
+            Metric = "Total Revenue",
+            Value = totalRevenue.ToString("N0") + " HUF"
+        },
+        new
+        {
+            Metric = "Total Orders",
+            Value = totalOrders.ToString()
+        },
+        new
+        {
+            Metric = "Total Units Sold",
+            Value = totalUnitsSold.ToString()
+        },
+        new
+        {
+            Metric = "Average Order Value",
+            Value = averageOrderValue.ToString("N0") + " HUF"
+        },
+        new
+        {
+            Metric = "Average Revenue Per Unit",
+            Value = averageRevenuePerUnit.ToString("N0") + " HUF"
+        },
+        new
+        {
+            Metric = "Best Selling Product",
+            Value = bestSellingProduct.ProductName + " (" + bestSellingProduct.Quantity + " pcs)"
+        },
+        new
+        {
+            Metric = "Top Revenue Product",
+            Value = topRevenueProduct.ProductName + " (" + topRevenueProduct.Revenue.ToString("N0") + " HUF)"
+        }
+    };
+
+            dgvProducts.DataSource = null;
+            dgvProducts.DataSource = result;
         }
     }
 }
