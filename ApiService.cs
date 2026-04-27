@@ -13,8 +13,8 @@ namespace ClosedAI
     public class ApiService
     {
         private HttpClient client = new HttpClient();
-        private string baseUrl = "http://40.67.243.80/DesktopModules/Hotcakes/API/rest/v1/";
-        private string apiKey = "1-765e8551-eb7f-4bc2-bf9f-b28e56a1ebad";
+        private readonly string baseUrl = EnvConfig.Require("CLOSEDAI_API_BASE_URL").TrimEnd('/') + "/";
+        private readonly string apiKey = EnvConfig.Require("CLOSEDAI_API_KEY");
 
         public async Task<List<OrderItem>> GetOrders()
         {

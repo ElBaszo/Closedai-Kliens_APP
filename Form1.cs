@@ -2,6 +2,7 @@
 using System.Windows.Forms;
 using System.Linq;
 using System.Collections.Generic;
+using System.Drawing;
 
 namespace ClosedAI
 {
@@ -21,6 +22,187 @@ namespace ClosedAI
             dtpTo.Value = DateTime.Today;
             dgvProducts.MultiSelect = true;
             dgvProducts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgvProducts.DataBindingComplete += dgvProducts_DataBindingComplete;
+            InitializeButtonVisualState();
+            ShowView(pnlProducts);
+        }
+
+        private void ShowView(Panel selectedPanel)
+        {
+            Panel gridHost = pnlProductsGridHost;
+            Button activeButton = btnProducts;
+
+            if (selectedPanel == pnlInventory)
+            {
+                gridHost = pnlInventoryGridHost;
+                activeButton = btnInventory;
+            }
+            else if (selectedPanel == pnlReports)
+            {
+                gridHost = pnlReportsGridHost;
+                activeButton = btnReports;
+            }
+
+            MoveGridTo(gridHost);
+
+            pnlProducts.Visible = false;
+            pnlInventory.Visible = false;
+            pnlReports.Visible = false;
+
+            selectedPanel.Visible = true;
+            selectedPanel.BringToFront();
+            SetActiveMenuButton(activeButton);
+            ApplyGridColumnVisibility();
+        }
+
+        private void btnProducts_Click(object sender, EventArgs e)
+        {
+            ShowView(pnlProducts);
+        }
+
+        private void btnInventory_Click(object sender, EventArgs e)
+        {
+            ShowView(pnlInventory);
+        }
+
+        private void btnReports_Click(object sender, EventArgs e)
+        {
+            ShowView(pnlReports);
+        }
+
+        private void MoveGridTo(Panel gridHost)
+        {
+            if (dgvProducts.Parent != gridHost)
+            {
+                gridHost.Controls.Add(dgvProducts);
+            }
+
+            dgvProducts.Dock = DockStyle.Fill;
+            dgvProducts.BringToFront();
+        }
+
+        private void SetActiveMenuButton(Button activeButton)
+        {
+            Button[] menuButtons = { btnProducts, btnInventory, btnReports };
+
+            foreach (Button button in menuButtons)
+            {
+                button.BackColor = Color.FromArgb(60, 71, 75);
+                button.ForeColor = Color.FromArgb(243, 255, 185);
+            }
+
+            activeButton.BackColor = Color.FromArgb(255, 253, 152);
+            activeButton.ForeColor = Color.FromArgb(22, 37, 33);
+        }
+
+        private void InitializeButtonVisualState()
+        {
+            SetNormalButtonStyle(button1);
+            SetNormalButtonStyle(btnTopProducts);
+            SetNormalButtonStyle(btnWorstProducts);
+            SetNormalButtonStyle(btnAllProducts);
+            SetNormalButtonStyle(btnSearchProduct);
+            SetNormalButtonStyle(btnCategoryStats);
+            SetNormalButtonStyle(btnRevenueStats);
+            SetNormalButtonStyle(btnPlus);
+            SetNormalButtonStyle(btnMinus);
+            SetNormalButtonStyle(btnApplyDiscount);
+        }
+
+        private void SetActiveButton(Button activeButton, params Button[] groupButtons)
+        {
+            foreach (Button button in groupButtons)
+            {
+                SetNormalButtonStyle(button);
+            }
+
+            activeButton.BackColor = Color.FromArgb(255, 253, 152);
+            activeButton.ForeColor = Color.FromArgb(22, 37, 33);
+            activeButton.UseVisualStyleBackColor = false;
+        }
+
+        private void SetNormalButtonStyle(Button button)
+        {
+            button.BackColor = Color.FromArgb(60, 71, 75);
+            button.ForeColor = Color.FromArgb(243, 255, 185);
+            button.UseVisualStyleBackColor = false;
+        }
+
+        private void dgvProducts_DataBindingComplete(object? sender, DataGridViewBindingCompleteEventArgs e)
+        {
+            ApplyGridColumnVisibility();
+        }
+
+        private void ApplyGridColumnVisibility()
+        {
+            HideGridColumn("Id");
+            HideGridColumn("bvin");
+            HideGridColumn("Bvin");
+            HideGridColumn("ProductId");
+            HideGridColumn("ProductSku");
+            HideGridColumn("Sku");
+            HideGridColumn("SKU");
+            HideGridColumn("TimeOfOrderUtc");
+            HideGridColumn("CreationDateUtc");
+            HideGridColumn("ListPrice");
+            HideGridColumn("IsPlaced");
+
+            SetGridHeader("OrderNumber", "Order");
+            SetGridHeader("UserEmail", "Customer Email");
+            SetGridHeader("TotalGrand", "Total");
+            SetGridHeader("StatusName", "Status");
+            SetGridHeader("ProductName", "Product");
+            SetGridHeader("TotalQuantitySold", "Units Sold");
+            SetGridHeader("TotalRevenue", "Revenue");
+            SetGridHeader("AvgRevenuePerUnit", "Avg / Unit");
+            SetGridHeader("OrderCount", "Orders");
+            SetGridHeader("TotalUnits", "Units");
+            SetGridHeader("Price", "Price");
+
+            FormatGridColumn("TotalGrand", "N0");
+            FormatGridColumn("TotalRevenue", "N0");
+            FormatGridColumn("AvgRevenuePerUnit", "N0");
+            FormatGridColumn("Price", "N0");
+        }
+
+        private void HideGridColumn(string columnName)
+        {
+            DataGridViewColumn? column = GetGridColumn(columnName);
+
+            if (column != null)
+            {
+                column.Visible = false;
+            }
+        }
+
+        private void SetGridHeader(string columnName, string headerText)
+        {
+            DataGridViewColumn? column = GetGridColumn(columnName);
+
+            if (column != null)
+            {
+                column.HeaderText = headerText;
+            }
+        }
+
+        private void FormatGridColumn(string columnName, string format)
+        {
+            DataGridViewColumn? column = GetGridColumn(columnName);
+
+            if (column != null)
+            {
+                column.DefaultCellStyle.Format = format;
+            }
+        }
+
+        private DataGridViewColumn? GetGridColumn(string columnName)
+        {
+            if (!dgvProducts.Columns.Contains(columnName))
+            {
+                return null;
+            }
+
+            return dgvProducts.Columns[columnName];
         }
 
 
@@ -41,6 +223,8 @@ namespace ClosedAI
 
         private async void button1_Click(object sender, EventArgs e)
         {
+            SetActiveButton(button1, button1, btnTopProducts, btnWorstProducts);
+
             ApiService api = new ApiService();
 
             allOrders = await api.GetOrders();
@@ -70,6 +254,8 @@ namespace ClosedAI
                 MessageBox.Show("Először töltsd be az orderöket.");
                 return;
             }
+
+            SetActiveButton(btnTopProducts, button1, btnTopProducts, btnWorstProducts);
 
             ApiService api = new ApiService();
 
@@ -116,6 +302,8 @@ namespace ClosedAI
                 return;
             }
 
+            SetActiveButton(btnWorstProducts, button1, btnTopProducts, btnWorstProducts);
+
             ApiService api = new ApiService();
 
             var validOrders = allOrders
@@ -155,6 +343,8 @@ namespace ClosedAI
 
         private async void btnPlus_Click(object sender, EventArgs e)
         {
+            SetNormalButtonStyle(btnPlus);
+
             var productIds = new List<string>();
 
             foreach (DataGridViewRow row in dgvProducts.Rows)
@@ -215,6 +405,8 @@ namespace ClosedAI
 
         private async void btnMinus_Click(object sender, EventArgs e)
         {
+            SetNormalButtonStyle(btnMinus);
+
             var productIds = new List<string>();
 
             foreach (DataGridViewRow row in dgvProducts.Rows)
@@ -300,6 +492,7 @@ namespace ClosedAI
 
             dgvProducts.DataSource = null;
             dgvProducts.DataSource = currentDisplayedProducts;
+            SetActiveButton(btnAllProducts, btnAllProducts, btnSearchProduct);
         }
 
         private async void btnSearchProduct_Click_Click(object sender, EventArgs e)
@@ -341,10 +534,13 @@ namespace ClosedAI
 
             dgvProducts.DataSource = null;
             dgvProducts.DataSource = currentDisplayedProducts;
+            SetActiveButton(btnSearchProduct, btnAllProducts, btnSearchProduct);
         }
 
         private async void btnApplyDiscount_Click(object sender, EventArgs e)
         {
+            SetNormalButtonStyle(btnApplyDiscount);
+
             if (!decimal.TryParse(txtDiscount.Text, out decimal discountPercent))
             {
                 MessageBox.Show("Adj meg érvényes kedvezmény %-ot.");
@@ -520,6 +716,7 @@ namespace ClosedAI
             dgvProducts.DataSource = finalStats;
             dgvProducts.Columns["TotalRevenue"].DefaultCellStyle.Format = "N0";
             dgvProducts.Columns["AvgRevenuePerUnit"].DefaultCellStyle.Format = "N0";
+            SetActiveButton(btnCategoryStats, btnCategoryStats, btnRevenueStats);
         }
 
         private async void btnRevenueStats_Click(object sender, EventArgs e)
@@ -631,6 +828,7 @@ namespace ClosedAI
 
             dgvProducts.DataSource = null;
             dgvProducts.DataSource = result;
+            SetActiveButton(btnRevenueStats, btnCategoryStats, btnRevenueStats);
         }
     }
 }
