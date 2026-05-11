@@ -272,43 +272,60 @@ namespace ClosedAI
 
         public async Task<ProductInventoryResponse> GetInventoryByProductBvin(string productBvin)
         {
-            string url = baseUrl + "productinventory?productBvin=" + productBvin + "&key=" + apiKey;
+            if (string.IsNullOrWhiteSpace(productBvin))
+                return null;
+
+            List<ProductInventoryResponse> inventories = await GetAllInventory();
+
+            return inventories
+                .FirstOrDefault(x => string.Equals(x.ProductBvin, productBvin, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public async Task<List<ProductInventoryResponse>> GetAllInventory()
+        {
+            string url = baseUrl + "productinventory?key=" + Uri.EscapeDataString(apiKey);
 
             HttpResponseMessage response = await client.GetAsync(url);
             string json = await response.Content.ReadAsStringAsync();
 
+            if (!response.IsSuccessStatusCode)
+                return new List<ProductInventoryResponse>();
+
             if (string.IsNullOrWhiteSpace(json) || json.TrimStart().StartsWith("<"))
-                return null;
+                return new List<ProductInventoryResponse>();
 
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
+            ProductInventoryListResponse result =
+                JsonSerializer.Deserialize<ProductInventoryListResponse>(
+                    json,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            var result = JsonSerializer.Deserialize<ProductInventoryListResponse>(json, options);
-
-            if (result == null || result.Content == null)
-                return null;
-
-            return result.Content
-                .FirstOrDefault(x => x.ProductBvin == productBvin);
+            return result == null || result.Content == null
+                ? new List<ProductInventoryResponse>()
+                : result.Content;
         }
+
         public async Task<bool> SaveInventory(string inventoryBvin, string productBvin, string variantId, int quantity)
         {
-            string url = baseUrl + "productinventory?key=" + apiKey;
-
-            var data = new
+            if (string.IsNullOrWhiteSpace(inventoryBvin))
             {
-                Bvin = inventoryBvin,
-                ProductBvin = productBvin,
-                VariantId = variantId,
-                QuantityOnHand = quantity,
-                QuantityReserved = 0,
-                LowStockPoint = 0,
-                OutOfStockPoint = 0
+                MessageBox.Show("Ehhez a termékhez nem található meglévő inventory rekord, ezért nem módosítottam a készletet.");
+                return false;
+            }
+
+            string url = baseUrl + "productinventory/" + Uri.EscapeDataString(inventoryBvin) + "?key=" + Uri.EscapeDataString(apiKey);
+
+            JsonObject data = new JsonObject
+            {
+                ["Bvin"] = inventoryBvin,
+                ["ProductBvin"] = productBvin,
+                ["VariantId"] = variantId ?? string.Empty,
+                ["QuantityOnHand"] = quantity,
+                ["QuantityReserved"] = 0,
+                ["LowStockPoint"] = 0,
+                ["OutOfStockPoint"] = 0
             };
 
-            string json = JsonSerializer.Serialize(data);
+            string json = data.ToJsonString();
             StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
 
             HttpResponseMessage response = await client.PostAsync(url, content);

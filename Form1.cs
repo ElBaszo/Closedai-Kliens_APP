@@ -11,6 +11,27 @@ namespace ClosedAI
         private List<OrderItem> allOrders;
         private List<dynamic> currentDisplayedProducts = new List<dynamic>();
 
+        private class ProductGridRow
+        {
+            public string ProductId { get; set; } = string.Empty;
+            public string ProductSku { get; set; } = string.Empty;
+            public string ProductName { get; set; } = string.Empty;
+            public decimal Price { get; set; }
+            public int? QuantityOnHand { get; set; }
+        }
+
+        private class OrderGridRow
+        {
+            public string Bvin { get; set; } = string.Empty;
+            public string OrderNumber { get; set; } = string.Empty;
+            public string OrderDate { get; set; } = string.Empty;
+            public string Customer { get; set; } = string.Empty;
+            public decimal TotalGrand { get; set; }
+            public string StatusName { get; set; } = string.Empty;
+            public int ItemCount { get; set; }
+            public string Products { get; set; } = string.Empty;
+        }
+
         public Form1()
         {
             InitializeComponent();
@@ -139,30 +160,36 @@ namespace ClosedAI
             HideGridColumn("bvin");
             HideGridColumn("Bvin");
             HideGridColumn("ProductId");
-            HideGridColumn("ProductSku");
-            HideGridColumn("Sku");
-            HideGridColumn("SKU");
             HideGridColumn("TimeOfOrderUtc");
             HideGridColumn("CreationDateUtc");
             HideGridColumn("ListPrice");
             HideGridColumn("IsPlaced");
 
             SetGridHeader("OrderNumber", "Order");
+            SetGridHeader("OrderDate", "Date");
+            SetGridHeader("Customer", "Customer");
             SetGridHeader("UserEmail", "Customer Email");
             SetGridHeader("TotalGrand", "Total");
             SetGridHeader("StatusName", "Status");
+            SetGridHeader("ItemCount", "Items");
             SetGridHeader("ProductName", "Product");
+            SetGridHeader("ProductSku", "SKU");
+            SetGridHeader("Sku", "SKU");
             SetGridHeader("TotalQuantitySold", "Units Sold");
             SetGridHeader("TotalRevenue", "Revenue");
             SetGridHeader("AvgRevenuePerUnit", "Avg / Unit");
             SetGridHeader("OrderCount", "Orders");
             SetGridHeader("TotalUnits", "Units");
             SetGridHeader("Price", "Price");
+            SetGridHeader("QuantityOnHand", "Raktáron");
+            SetGridHeader("Products", "Order Products");
 
             FormatGridColumn("TotalGrand", "N0");
             FormatGridColumn("TotalRevenue", "N0");
             FormatGridColumn("AvgRevenuePerUnit", "N0");
             FormatGridColumn("Price", "N0");
+
+            ConfigureOrderProductsColumn();
         }
 
         private void HideGridColumn(string columnName)
@@ -205,6 +232,21 @@ namespace ClosedAI
             return dgvProducts.Columns[columnName];
         }
 
+        private void ConfigureOrderProductsColumn()
+        {
+            DataGridViewColumn? column = GetGridColumn("Products");
+
+            if (column == null)
+            {
+                dgvProducts.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
+                return;
+            }
+
+            column.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            column.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
+            dgvProducts.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+        }
+
 
         private DateTime ParseHotcakesDate(string hotcakesDate)
         {
@@ -228,9 +270,139 @@ namespace ClosedAI
             ApiService api = new ApiService();
 
             allOrders = await api.GetOrders();
+            var orderRows = await BuildOrderGridRows(api, allOrders);
 
             dgvProducts.DataSource = null;
-            dgvProducts.DataSource = allOrders;
+            dgvProducts.DataSource = orderRows;
+        }
+
+        private async Task<List<OrderGridRow>> BuildOrderGridRows(ApiService api, List<OrderItem> orders)
+        {
+            var rows = new List<OrderGridRow>();
+
+            foreach (var orderGroup in GetOrderGroupsForDisplay(orders))
+            {
+                OrderItem order = GetPrimaryOrderForGroup(orderGroup);
+                List<OrderDetailItem> items = await GetOrderItemsForGroup(api, orderGroup);
+
+                DateTime orderDate = orderGroup
+                    .Select(x => ParseHotcakesDate(x.TimeOfOrderUtc))
+                    .Where(x => x != DateTime.MinValue)
+                    .DefaultIfEmpty(DateTime.MinValue)
+                    .Max();
+
+                rows.Add(new OrderGridRow
+                {
+                    Bvin = order.bvin,
+                    OrderNumber = order.OrderNumber,
+                    OrderDate = orderDate == DateTime.MinValue ? string.Empty : orderDate.ToString("yyyy-MM-dd HH:mm"),
+                    Customer = order.UserEmail,
+                    TotalGrand = order.TotalGrand,
+                    StatusName = order.StatusName,
+                    ItemCount = items.Sum(x => x.Quantity),
+                    Products = FormatOrderProducts(items)
+                });
+            }
+
+            return rows
+                .OrderByDescending(x => ParseOrderNumberForSort(x.OrderNumber))
+                .ThenByDescending(x => x.OrderDate)
+                .ToList();
+        }
+
+        private List<IGrouping<string, OrderItem>> GetOrderGroupsForDisplay(List<OrderItem> orders)
+        {
+            return orders
+                .Where(x => x.IsPlaced)
+                .Where(x => !string.IsNullOrWhiteSpace(x.OrderNumber) ||
+                            !string.IsNullOrWhiteSpace(x.bvin))
+                .GroupBy(GetOrderGroupKey)
+                .ToList();
+        }
+
+        private string GetOrderGroupKey(OrderItem order)
+        {
+            if (!string.IsNullOrWhiteSpace(order.OrderNumber))
+            {
+                return "order:" + order.OrderNumber.Trim();
+            }
+
+            return "bvin:" + order.bvin;
+        }
+
+        private OrderItem GetPrimaryOrderForGroup(IGrouping<string, OrderItem> orderGroup)
+        {
+            return orderGroup
+                .OrderByDescending(x => ParseHotcakesDate(x.TimeOfOrderUtc))
+                .First();
+        }
+
+        private async Task<List<OrderDetailItem>> GetOrderItemsForGroup(ApiService api, IGrouping<string, OrderItem> orderGroup)
+        {
+            foreach (string bvin in orderGroup
+                .Select(x => x.bvin)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct())
+            {
+                List<OrderDetailItem> items = await api.GetOrderDetailsItems(bvin);
+
+                if (items.Count > 0)
+                {
+                    return items;
+                }
+            }
+
+            return new List<OrderDetailItem>();
+        }
+
+        private int ParseOrderNumberForSort(string orderNumber)
+        {
+            return int.TryParse(orderNumber, out int value) ? value : 0;
+        }
+
+        private List<OrderItem> GetPlacedOrdersWithBvin(List<OrderItem> orders)
+        {
+            return orders
+                .Where(x => x.IsPlaced)
+                .Where(x => !string.IsNullOrWhiteSpace(x.bvin))
+                .Where(x => !string.IsNullOrWhiteSpace(x.OrderNumber))
+                .GroupBy(GetOrderGroupKey)
+                .Select(g => g.First())
+                .ToList();
+        }
+
+        private string FormatOrderProducts(List<OrderDetailItem> items)
+        {
+            var groupedItems = items
+                .GroupBy(item => new
+                {
+                    item.ProductId,
+                    item.ProductSku,
+                    item.ProductName
+                })
+                .Select(group => new
+                {
+                    group.Key.ProductSku,
+                    group.Key.ProductName,
+                    Quantity = group.Sum(item => item.Quantity)
+                });
+
+            return string.Join(", ", groupedItems.Select(item =>
+            {
+                string productName = item.ProductName;
+
+                if (string.IsNullOrWhiteSpace(productName))
+                {
+                    productName = item.ProductSku;
+                }
+
+                if (string.IsNullOrWhiteSpace(productName))
+                {
+                    productName = "Unknown product";
+                }
+
+                return productName + " x" + item.Quantity;
+            }));
         }
 
         private void txtSearch_TextChanged(object sender, EventArgs e)
@@ -259,10 +431,7 @@ namespace ClosedAI
 
             ApiService api = new ApiService();
 
-            var validOrders = allOrders
-                .Where(x => x.IsPlaced)
-                .Where(x => !string.IsNullOrWhiteSpace(x.bvin))
-                .ToList();
+            var validOrders = GetPlacedOrdersWithBvin(allOrders);
 
             List<OrderDetailItem> allItems = new List<OrderDetailItem>();
 
@@ -306,10 +475,7 @@ namespace ClosedAI
 
             ApiService api = new ApiService();
 
-            var validOrders = allOrders
-                .Where(x => x.IsPlaced)
-                .Where(x => !string.IsNullOrWhiteSpace(x.bvin))
-                .ToList();
+            var validOrders = GetPlacedOrdersWithBvin(allOrders);
 
             List<OrderDetailItem> allItems = new List<OrderDetailItem>();
 
@@ -379,28 +545,42 @@ namespace ClosedAI
 
             ApiService api = new ApiService();
             int successCount = 0;
+            int missingInventoryCount = 0;
 
             foreach (string productBvin in productIds)
             {
                 var inventory = await api.GetInventoryByProductBvin(productBvin);
 
                 if (inventory == null)
+                {
+                    missingInventoryCount++;
                     continue;
+                }
 
                 int newQuantity = inventory.QuantityOnHand + 1;
 
                 bool success = await api.SaveInventory(
                     inventory.Bvin,
-                    inventory.ProductBvin,
+                    productBvin,
                     inventory.VariantId,
                     newQuantity
                 );
 
                 if (success)
+                {
                     successCount++;
+                    UpdateDisplayedInventoryQuantity(productBvin, newQuantity);
+                }
             }
 
-            MessageBox.Show(successCount + " különböző termék inventoryja növelve.");
+            string message = successCount + " különböző termék inventoryja növelve.";
+
+            if (missingInventoryCount > 0)
+            {
+                message += "\n" + missingInventoryCount + " kijelölt termékhez nem található meglévő inventory rekord.";
+            }
+
+            MessageBox.Show(message);
         }
 
         private async void btnMinus_Click(object sender, EventArgs e)
@@ -441,13 +621,17 @@ namespace ClosedAI
 
             ApiService api = new ApiService();
             int successCount = 0;
+            int missingInventoryCount = 0;
 
             foreach (string productBvin in productIds)
             {
                 var inventory = await api.GetInventoryByProductBvin(productBvin);
 
                 if (inventory == null)
+                {
+                    missingInventoryCount++;
                     continue;
+                }
 
                 if (inventory.QuantityOnHand <= 0)
                     continue;
@@ -462,10 +646,37 @@ namespace ClosedAI
                 );
 
                 if (success)
+                {
                     successCount++;
+                    UpdateDisplayedInventoryQuantity(productBvin, newQuantity);
+                }
             }
 
-            MessageBox.Show(successCount + " különböző termék inventoryja csökkentve.");
+            string message = successCount + " különböző termék inventoryja csökkentve.";
+
+            if (missingInventoryCount > 0)
+            {
+                message += "\n" + missingInventoryCount + " kijelölt termékhez nem található meglévő inventory rekord.";
+            }
+
+            MessageBox.Show(message);
+        }
+
+        private void UpdateDisplayedInventoryQuantity(string productBvin, int newQuantity)
+        {
+            if (!dgvProducts.Columns.Contains("QuantityOnHand"))
+            {
+                return;
+            }
+
+            foreach (DataGridViewRow row in dgvProducts.Rows)
+            {
+                if (row.Cells["ProductId"].Value != null &&
+                    row.Cells["ProductId"].Value.ToString() == productBvin)
+                {
+                    row.Cells["QuantityOnHand"].Value = newQuantity;
+                }
+            }
         }
 
         private async void btnAllProducts_Click(object sender, EventArgs e)
@@ -480,19 +691,36 @@ namespace ClosedAI
                 return;
             }
 
-            var result = products.Select(p => new
-            {
-                ProductId = p.Bvin,
-                ProductSku = p.Sku,
-                ProductName = p.ProductName,
-                Price = p.SitePrice
-            }).ToList();
+            var result = await BuildProductGridRows(api, products);
 
             currentDisplayedProducts = result.Cast<dynamic>().ToList();
 
             dgvProducts.DataSource = null;
             dgvProducts.DataSource = currentDisplayedProducts;
             SetActiveButton(btnAllProducts, btnAllProducts, btnSearchProduct);
+        }
+
+        private async Task<List<ProductGridRow>> BuildProductGridRows(ApiService api, List<ProductResponse> products)
+        {
+            var result = new List<ProductGridRow>();
+            var inventories = await api.GetAllInventory();
+
+            foreach (ProductResponse product in products)
+            {
+                ProductInventoryResponse inventory = inventories
+                    .FirstOrDefault(x => string.Equals(x.ProductBvin, product.Bvin, StringComparison.OrdinalIgnoreCase));
+
+                result.Add(new ProductGridRow
+                {
+                    ProductId = product.Bvin,
+                    ProductSku = product.Sku,
+                    ProductName = product.ProductName,
+                    Price = product.SitePrice,
+                    QuantityOnHand = inventory?.QuantityOnHand
+                });
+            }
+
+            return result;
         }
 
         private async void btnSearchProduct_Click_Click(object sender, EventArgs e)
@@ -519,18 +747,21 @@ namespace ClosedAI
                 return;
             }
 
-            var result = new List<dynamic>
-    {
-        new
-        {
-            ProductId = product.Bvin,
-            ProductSku = product.Sku,
-            ProductName = product.ProductName,
-            Price = product.SitePrice
-        }
-    };
+            var inventory = await api.GetInventoryByProductBvin(product.Bvin);
 
-            currentDisplayedProducts = result;
+            var result = new List<ProductGridRow>
+            {
+                new ProductGridRow
+                {
+                    ProductId = product.Bvin,
+                    ProductSku = product.Sku,
+                    ProductName = product.ProductName,
+                    Price = product.SitePrice,
+                    QuantityOnHand = inventory?.QuantityOnHand
+                }
+            };
+
+            currentDisplayedProducts = result.Cast<dynamic>().ToList();
 
             dgvProducts.DataSource = null;
             dgvProducts.DataSource = currentDisplayedProducts;
@@ -632,8 +863,7 @@ namespace ClosedAI
             DateTime toDate = dtpTo.Value.Date.AddDays(1);
 
             var filteredOrders =
-                allOrders
-                .Where(o => o.IsPlaced)
+                GetPlacedOrdersWithBvin(allOrders)
                 .Where(o =>
                 {
                     DateTime d =
@@ -731,8 +961,7 @@ namespace ClosedAI
             DateTime fromDate = dtpFrom.Value.Date;
             DateTime toDate = dtpTo.Value.Date.AddDays(1);
 
-            var filteredOrders = allOrders
-                .Where(o => o.IsPlaced)
+            var filteredOrders = GetPlacedOrdersWithBvin(allOrders)
                 .Where(o =>
                 {
                     DateTime orderDate = ParseHotcakesDate(o.TimeOfOrderUtc);
