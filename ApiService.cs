@@ -304,26 +304,40 @@ namespace ClosedAI
                 : result.Content;
         }
 
-        public async Task<bool> SaveInventory(string inventoryBvin, string productBvin, string variantId, int quantity)
+        public async Task<bool> SaveInventory(
+            string inventoryBvin,
+            string productBvin,
+            string variantId,
+            int quantity,
+            int quantityReserved = 0,
+            int lowStockPoint = 0,
+            int outOfStockPoint = 0)
         {
-            if (string.IsNullOrWhiteSpace(inventoryBvin))
+            if (string.IsNullOrWhiteSpace(productBvin))
             {
-                MessageBox.Show("Ehhez a termékhez nem található meglévő inventory rekord, ezért nem módosítottam a készletet.");
+                MessageBox.Show("Hiányzik a termék azonosítója, ezért nem módosítottam a készletet.");
                 return false;
             }
 
-            string url = baseUrl + "productinventory/" + Uri.EscapeDataString(inventoryBvin) + "?key=" + Uri.EscapeDataString(apiKey);
+            bool isCreate = string.IsNullOrWhiteSpace(inventoryBvin);
+            string url = isCreate
+                ? baseUrl + "productinventory?key=" + Uri.EscapeDataString(apiKey)
+                : baseUrl + "productinventory/" + Uri.EscapeDataString(inventoryBvin) + "?key=" + Uri.EscapeDataString(apiKey);
 
             JsonObject data = new JsonObject
             {
-                ["Bvin"] = inventoryBvin,
                 ["ProductBvin"] = productBvin,
                 ["VariantId"] = variantId ?? string.Empty,
                 ["QuantityOnHand"] = quantity,
-                ["QuantityReserved"] = 0,
-                ["LowStockPoint"] = 0,
-                ["OutOfStockPoint"] = 0
+                ["QuantityReserved"] = quantityReserved,
+                ["LowStockPoint"] = lowStockPoint,
+                ["OutOfStockPoint"] = outOfStockPoint
             };
+
+            if (!isCreate)
+            {
+                data["Bvin"] = inventoryBvin;
+            }
 
             string json = data.ToJsonString();
             StringContent content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -331,13 +345,44 @@ namespace ClosedAI
             HttpResponseMessage response = await client.PostAsync(url, content);
             string responseText = await response.Content.ReadAsStringAsync();
 
-            if (!response.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode || responseText.Contains("EXCEPTION"))
             {
                 MessageBox.Show(responseText);
                 return false;
             }
 
+            if (InventoryResponseHasErrors(responseText))
+            {
+                return false;
+            }
+
             return true;
+        }
+
+        private bool InventoryResponseHasErrors(string responseText)
+        {
+            if (string.IsNullOrWhiteSpace(responseText) || responseText.TrimStart().StartsWith("<"))
+            {
+                return false;
+            }
+
+            try
+            {
+                using JsonDocument doc = JsonDocument.Parse(responseText);
+
+                if (doc.RootElement.TryGetProperty("Errors", out JsonElement errors) &&
+                    errors.ValueKind == JsonValueKind.Array &&
+                    errors.GetArrayLength() > 0)
+                {
+                    MessageBox.Show("Inventory mentés hiba:\n" + errors.GetRawText());
+                    return true;
+                }
+            }
+            catch
+            {
+            }
+
+            return false;
         }
 
         public async Task<bool> UpdateProductPrice(string productBvin, decimal newPrice)

@@ -17,7 +17,7 @@ namespace ClosedAI
             public string ProductSku { get; set; } = string.Empty;
             public string ProductName { get; set; } = string.Empty;
             public decimal Price { get; set; }
-            public int? QuantityOnHand { get; set; }
+            public int QuantityOnHand { get; set; }
         }
 
         private class OrderGridRow
@@ -245,6 +245,17 @@ namespace ClosedAI
             column.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
             column.DefaultCellStyle.WrapMode = DataGridViewTriState.True;
             dgvProducts.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells;
+        }
+
+        private bool ConfirmHotcakesModification(string message)
+        {
+            DialogResult result = MessageBox.Show(
+                message,
+                "Megerősítés",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Warning);
+
+            return result == DialogResult.Yes;
         }
 
 
@@ -543,31 +554,40 @@ namespace ClosedAI
                 return;
             }
 
+            if (!ConfirmHotcakesModification(
+                "Biztosan növelni szeretnéd " + productIds.Count + " kijelölt termék készletét 1 darabbal?"))
+            {
+                return;
+            }
+
             ApiService api = new ApiService();
             int successCount = 0;
-            int missingInventoryCount = 0;
+            int createdInventoryCount = 0;
 
             foreach (string productBvin in productIds)
             {
                 var inventory = await api.GetInventoryByProductBvin(productBvin);
 
-                if (inventory == null)
-                {
-                    missingInventoryCount++;
-                    continue;
-                }
-
-                int newQuantity = inventory.QuantityOnHand + 1;
+                int currentQuantity = inventory?.QuantityOnHand ?? 0;
+                int newQuantity = currentQuantity + 1;
 
                 bool success = await api.SaveInventory(
-                    inventory.Bvin,
+                    inventory?.Bvin ?? string.Empty,
                     productBvin,
-                    inventory.VariantId,
-                    newQuantity
+                    inventory?.VariantId ?? string.Empty,
+                    newQuantity,
+                    inventory?.QuantityReserved ?? 0,
+                    inventory?.LowStockPoint ?? 0,
+                    inventory?.OutOfStockPoint ?? 0
                 );
 
                 if (success)
                 {
+                    if (inventory == null)
+                    {
+                        createdInventoryCount++;
+                    }
+
                     successCount++;
                     UpdateDisplayedInventoryQuantity(productBvin, newQuantity);
                 }
@@ -575,9 +595,9 @@ namespace ClosedAI
 
             string message = successCount + " különböző termék inventoryja növelve.";
 
-            if (missingInventoryCount > 0)
+            if (createdInventoryCount > 0)
             {
-                message += "\n" + missingInventoryCount + " kijelölt termékhez nem található meglévő inventory rekord.";
+                message += "\n" + createdInventoryCount + " termékhez létrehoztam a hiányzó inventory rekordot.";
             }
 
             MessageBox.Show(message);
@@ -619,30 +639,37 @@ namespace ClosedAI
                 return;
             }
 
+            if (!ConfirmHotcakesModification(
+                "Biztosan csökkenteni szeretnéd " + productIds.Count + " kijelölt termék készletét 1 darabbal?"))
+            {
+                return;
+            }
+
             ApiService api = new ApiService();
             int successCount = 0;
-            int missingInventoryCount = 0;
+            int zeroStockCount = 0;
 
             foreach (string productBvin in productIds)
             {
                 var inventory = await api.GetInventoryByProductBvin(productBvin);
+                int currentQuantity = inventory?.QuantityOnHand ?? 0;
 
-                if (inventory == null)
+                if (currentQuantity <= 0)
                 {
-                    missingInventoryCount++;
+                    zeroStockCount++;
                     continue;
                 }
 
-                if (inventory.QuantityOnHand <= 0)
-                    continue;
-
-                int newQuantity = inventory.QuantityOnHand - 1;
+                int newQuantity = currentQuantity - 1;
 
                 bool success = await api.SaveInventory(
-                    inventory.Bvin,
-                    inventory.ProductBvin,
-                    inventory.VariantId,
-                    newQuantity
+                    inventory?.Bvin ?? string.Empty,
+                    productBvin,
+                    inventory?.VariantId ?? string.Empty,
+                    newQuantity,
+                    inventory?.QuantityReserved ?? 0,
+                    inventory?.LowStockPoint ?? 0,
+                    inventory?.OutOfStockPoint ?? 0
                 );
 
                 if (success)
@@ -654,9 +681,9 @@ namespace ClosedAI
 
             string message = successCount + " különböző termék inventoryja csökkentve.";
 
-            if (missingInventoryCount > 0)
+            if (zeroStockCount > 0)
             {
-                message += "\n" + missingInventoryCount + " kijelölt termékhez nem található meglévő inventory rekord.";
+                message += "\n" + zeroStockCount + " kijelölt termék készlete már 0, ezért nem csökkentettem.";
             }
 
             MessageBox.Show(message);
@@ -716,7 +743,7 @@ namespace ClosedAI
                     ProductSku = product.Sku,
                     ProductName = product.ProductName,
                     Price = product.SitePrice,
-                    QuantityOnHand = inventory?.QuantityOnHand
+                    QuantityOnHand = inventory?.QuantityOnHand ?? 0
                 });
             }
 
@@ -757,7 +784,7 @@ namespace ClosedAI
                     ProductSku = product.Sku,
                     ProductName = product.ProductName,
                     Price = product.SitePrice,
-                    QuantityOnHand = inventory?.QuantityOnHand
+                    QuantityOnHand = inventory?.QuantityOnHand ?? 0
                 }
             };
 
@@ -809,6 +836,16 @@ namespace ClosedAI
             if (productIds.Count == 0)
             {
                 MessageBox.Show("Nincs kijelölt termék.");
+                return;
+            }
+
+            if (!ConfirmHotcakesModification(
+                "Biztosan alkalmazni szeretnéd a(z) " +
+                discountPercent +
+                "% kedvezményt " +
+                productIds.Count +
+                " kijelölt termékre?\nEz módosítja a termékek árát."))
+            {
                 return;
             }
 
