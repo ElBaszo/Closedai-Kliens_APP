@@ -691,19 +691,123 @@ namespace ClosedAI
 
         private void UpdateDisplayedInventoryQuantity(string productBvin, int newQuantity)
         {
-            if (!dgvProducts.Columns.Contains("QuantityOnHand"))
+            UpdateDisplayedProductValue(productBvin, "QuantityOnHand", newQuantity);
+        }
+
+        private void UpdateDisplayedProductPrice(string productBvin, decimal newPrice)
+        {
+            UpdateDisplayedProductValue(productBvin, "Price", newPrice);
+        }
+
+        private void UpdateDisplayedProductValue<T>(string productBvin, string propertyName, T newValue)
+        {
+            UpdateCurrentDisplayedProducts(productBvin, propertyName, newValue);
+
+            if (!dgvProducts.Columns.Contains("ProductId"))
             {
                 return;
             }
 
             foreach (DataGridViewRow row in dgvProducts.Rows)
             {
-                if (row.Cells["ProductId"].Value != null &&
-                    row.Cells["ProductId"].Value.ToString() == productBvin)
+                string rowProductBvin = Convert.ToString(row.Cells["ProductId"].Value) ?? string.Empty;
+
+                if (rowProductBvin == productBvin)
                 {
-                    row.Cells["QuantityOnHand"].Value = newQuantity;
+                    UpdateProductObjectValue(row.DataBoundItem, propertyName, newValue);
+
+                    if (dgvProducts.Columns.Contains(propertyName))
+                    {
+                        row.Cells[propertyName].Value = newValue;
+                    }
                 }
             }
+
+            RefreshDisplayedProductRows();
+        }
+
+        private void UpdateCurrentDisplayedProducts<T>(string productBvin, string propertyName, T newValue)
+        {
+            foreach (object? product in currentDisplayedProducts)
+            {
+                if (ProductHasBvin(product, productBvin))
+                {
+                    UpdateProductObjectValue(product, propertyName, newValue);
+                }
+            }
+        }
+
+        private bool ProductHasBvin(object? product, string productBvin)
+        {
+            if (product == null)
+            {
+                return false;
+            }
+
+            var property = product.GetType().GetProperty("ProductId");
+
+            if (property == null)
+            {
+                return false;
+            }
+
+            object? value = property.GetValue(product);
+
+            return value != null &&
+                   value.ToString() == productBvin;
+        }
+
+        private void UpdateProductObjectValue<T>(object? product, string propertyName, T newValue)
+        {
+            if (product == null)
+            {
+                return;
+            }
+
+            var property = product.GetType().GetProperty(propertyName);
+
+            if (property != null && property.CanWrite)
+            {
+                property.SetValue(product, newValue);
+            }
+        }
+
+        private void RefreshDisplayedProductRows()
+        {
+            object? dataSource = dgvProducts.DataSource;
+            BindingContext? context = BindingContext;
+
+            if (dataSource != null && context != null)
+            {
+                CurrencyManager? manager = context[dataSource] as CurrencyManager;
+                manager?.Refresh();
+            }
+
+            dgvProducts.Refresh();
+        }
+
+        private bool TryGetDisplayedProductPrice(string productBvin, out decimal price)
+        {
+            price = 0;
+
+            if (!dgvProducts.Columns.Contains("ProductId") ||
+                !dgvProducts.Columns.Contains("Price"))
+            {
+                return false;
+            }
+
+            foreach (DataGridViewRow row in dgvProducts.Rows)
+            {
+                string rowProductBvin = Convert.ToString(row.Cells["ProductId"].Value) ?? string.Empty;
+
+                if (rowProductBvin == productBvin)
+                {
+                    price = Convert.ToDecimal(row.Cells["Price"].Value);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private async void btnAllProducts_Click(object sender, EventArgs e)
@@ -855,19 +959,10 @@ namespace ClosedAI
 
             foreach (string productId in productIds)
             {
-                DataGridViewRow row = dgvProducts.Rows
-                    .Cast<DataGridViewRow>()
-                    .FirstOrDefault(r =>
-                        r.Cells["ProductId"].Value != null &&
-                        r.Cells["ProductId"].Value.ToString() == productId);
-
-                if (row == null)
+                if (!TryGetDisplayedProductPrice(productId, out decimal oldPrice))
+                {
                     continue;
-
-                decimal oldPrice =
-                    Convert.ToDecimal(
-                        row.Cells["Price"].Value
-                    );
+                }
 
                 decimal newPrice =
                     oldPrice *
@@ -880,7 +975,10 @@ namespace ClosedAI
                     );
 
                 if (success)
+                {
                     successCount++;
+                    UpdateDisplayedProductPrice(productId, newPrice);
+                }
             }
 
             MessageBox.Show(
