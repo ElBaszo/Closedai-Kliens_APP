@@ -424,6 +424,7 @@ namespace ClosedAI
             txtSearch.ForeColor = Color.FromArgb(22, 37, 33);
             txtSearch.Location = new Point(350, 29);
             txtSearch.Name = "txtSearch";
+            txtSearch.PlaceholderText = "SKU, terméknév vagy márka";
             txtSearch.Size = new Size(208, 37);
             txtSearch.TabIndex = 2;
             txtSearch.TextChanged += txtSearch_TextChanged;
@@ -433,11 +434,11 @@ namespace ClosedAI
             lblSku.AutoSize = true;
             lblSku.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             lblSku.ForeColor = Color.FromArgb(255, 253, 152);
-            lblSku.Location = new Point(290, 34);
+            lblSku.Location = new Point(250, 34);
             lblSku.Name = "lblSku";
-            lblSku.Size = new Size(45, 28);
+            lblSku.Size = new Size(81, 28);
             lblSku.TabIndex = 1;
-            lblSku.Text = "SKU";
+            lblSku.Text = "Keresés";
             // 
             // btnAllProducts
             // 

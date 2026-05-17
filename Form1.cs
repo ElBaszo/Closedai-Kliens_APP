@@ -10,12 +10,22 @@ namespace ClosedAI
     {
         private List<OrderItem> allOrders;
         private List<dynamic> currentDisplayedProducts = new List<dynamic>();
+        private readonly string[] knownProductBrands =
+        {
+            "Ferrari",
+            "Porsche",
+            "Mercedes",
+            "Lamborghini",
+            "BMW",
+            "McLaren"
+        };
 
         private class ProductGridRow
         {
             public string ProductId { get; set; } = string.Empty;
             public string ProductSku { get; set; } = string.Empty;
             public string ProductName { get; set; } = string.Empty;
+            public string ProductBrand { get; set; } = string.Empty;
             public decimal Price { get; set; }
             public int QuantityOnHand { get; set; }
         }
@@ -174,6 +184,7 @@ namespace ClosedAI
             SetGridHeader("ItemCount", "Items");
             SetGridHeader("ProductName", "Product");
             SetGridHeader("ProductSku", "SKU");
+            SetGridHeader("ProductBrand", "Márka");
             SetGridHeader("Sku", "SKU");
             SetGridHeader("TotalQuantitySold", "Units Sold");
             SetGridHeader("TotalRevenue", "Revenue");
@@ -418,16 +429,97 @@ namespace ClosedAI
 
         private void txtSearch_TextChanged(object sender, EventArgs e)
         {
-            string search = txtSearch.Text.ToLower();
+            ApplyCurrentProductSearch();
+        }
 
-            var filtered = currentDisplayedProducts
-                .Where(x =>
-                    (x.ProductName != null && x.ProductName.ToLower().Contains(search)) ||
-                    (x.ProductSku != null && x.ProductSku.ToLower().Contains(search)))
-                .ToList();
+        private void ApplyCurrentProductSearch()
+        {
+            string search = NormalizeSearchText(txtSearch.Text);
+            List<dynamic> filtered;
+
+            if (string.IsNullOrWhiteSpace(search))
+            {
+                filtered = currentDisplayedProducts.ToList();
+            }
+            else
+            {
+                filtered = currentDisplayedProducts
+                    .Where(x => ProductMatchesSearch(x, search))
+                    .ToList();
+            }
 
             dgvProducts.DataSource = null;
             dgvProducts.DataSource = filtered;
+        }
+
+        private bool ProductMatchesSearch(object? product, string normalizedSearch)
+        {
+            if (product == null)
+            {
+                return false;
+            }
+
+            string sku = GetPropertyText(product, "ProductSku");
+
+            if (string.IsNullOrWhiteSpace(sku))
+            {
+                sku = GetPropertyText(product, "Sku");
+            }
+
+            string productName = GetPropertyText(product, "ProductName");
+            string brand = GetPropertyText(product, "ProductBrand");
+
+            if (string.IsNullOrWhiteSpace(brand))
+            {
+                brand = GetPropertyText(product, "Brand");
+            }
+
+            if (string.IsNullOrWhiteSpace(brand))
+            {
+                brand = GetKnownProductBrand(productName, sku);
+            }
+
+            return ContainsNormalizedText(sku, normalizedSearch) ||
+                   ContainsNormalizedText(productName, normalizedSearch) ||
+                   ContainsNormalizedText(brand, normalizedSearch);
+        }
+
+        private string GetPropertyText(object product, string propertyName)
+        {
+            var property = product.GetType().GetProperty(propertyName);
+
+            if (property == null)
+            {
+                return string.Empty;
+            }
+
+            return Convert.ToString(property.GetValue(product)) ?? string.Empty;
+        }
+
+        private string GetKnownProductBrand(params string[] values)
+        {
+            foreach (string brand in knownProductBrands)
+            {
+                foreach (string value in values)
+                {
+                    if (ContainsNormalizedText(value, NormalizeSearchText(brand)))
+                    {
+                        return brand;
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private bool ContainsNormalizedText(string value, string normalizedSearch)
+        {
+            return NormalizeSearchText(value).Contains(normalizedSearch);
+        }
+
+        private string NormalizeSearchText(string value)
+        {
+            return (value ?? string.Empty).Trim().ToLowerInvariant();
         }
 
         private async void btnTopProducts_Click(object sender, EventArgs e)
@@ -846,6 +938,7 @@ namespace ClosedAI
                     ProductId = product.Bvin,
                     ProductSku = product.Sku,
                     ProductName = product.ProductName,
+                    ProductBrand = GetKnownProductBrand(product.ProductName, product.Sku),
                     Price = product.SitePrice,
                     QuantityOnHand = inventory?.QuantityOnHand ?? 0
                 });
@@ -858,39 +951,27 @@ namespace ClosedAI
         {
             if (string.IsNullOrWhiteSpace(txtSearch.Text))
             {
-                MessageBox.Show("Adj meg egy SKU-t!");
+                MessageBox.Show("Adj meg keresési szöveget SKU, terméknév vagy márka alapján.");
                 return;
             }
 
-            string searchSku = txtSearch.Text.Trim().ToLower();
+            string search = NormalizeSearchText(txtSearch.Text);
 
             ApiService api = new ApiService();
 
             var products = await api.GetAllProducts();
 
-            var product = products
-                .FirstOrDefault(p => p.Sku != null &&
-                                     p.Sku.ToLower() == searchSku);
+            var matchingProducts = products
+                .Where(p => ProductMatchesSearch(p, search))
+                .ToList();
 
-            if (product == null)
+            if (matchingProducts.Count == 0)
             {
-                MessageBox.Show("Nincs ilyen SKU-jú termék.");
+                MessageBox.Show("Nincs a keresésnek megfelelő termék.");
                 return;
             }
 
-            var inventory = await api.GetInventoryByProductBvin(product.Bvin);
-
-            var result = new List<ProductGridRow>
-            {
-                new ProductGridRow
-                {
-                    ProductId = product.Bvin,
-                    ProductSku = product.Sku,
-                    ProductName = product.ProductName,
-                    Price = product.SitePrice,
-                    QuantityOnHand = inventory?.QuantityOnHand ?? 0
-                }
-            };
+            var result = await BuildProductGridRows(api, matchingProducts);
 
             currentDisplayedProducts = result.Cast<dynamic>().ToList();
 
