@@ -10,6 +10,8 @@ namespace ClosedAI
     {
         private List<OrderItem> allOrders;
         private List<dynamic> currentDisplayedProducts = new List<dynamic>();
+        private int activeViewVersion;
+        private bool suppressProductSearch;
         private readonly string[] knownProductBrands =
         {
             "Ferrari",
@@ -47,7 +49,7 @@ namespace ClosedAI
             InitializeComponent();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private async void Form1_Load(object sender, EventArgs e)
         {
             dtpFrom.Value = DateTime.Today.AddDays(-30);
             dtpTo.Value = DateTime.Today;
@@ -55,26 +57,15 @@ namespace ClosedAI
             dgvProducts.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvProducts.DataBindingComplete += dgvProducts_DataBindingComplete;
             InitializeButtonVisualState();
-            ShowView(pnlProducts);
+            await ShowProductsViewAsync();
         }
 
-        private void ShowView(Panel selectedPanel)
+        private int ShowView(Panel selectedPanel, Panel gridHost, Button activeButton)
         {
-            Panel gridHost = pnlProductsGridHost;
-            Button activeButton = btnProducts;
-
-            if (selectedPanel == pnlInventory)
-            {
-                gridHost = pnlInventoryGridHost;
-                activeButton = btnInventory;
-            }
-            else if (selectedPanel == pnlReports)
-            {
-                gridHost = pnlReportsGridHost;
-                activeButton = btnReports;
-            }
+            int viewVersion = ++activeViewVersion;
 
             MoveGridTo(gridHost);
+            ResetDataGridView();
 
             pnlProducts.Visible = false;
             pnlInventory.Visible = false;
@@ -83,22 +74,42 @@ namespace ClosedAI
             selectedPanel.Visible = true;
             selectedPanel.BringToFront();
             SetActiveMenuButton(activeButton);
-            ApplyGridColumnVisibility();
+
+            return viewVersion;
         }
 
-        private void btnProducts_Click(object sender, EventArgs e)
+        private async Task ShowProductsViewAsync()
         {
-            ShowView(pnlProducts);
+            int viewVersion = ShowView(pnlProducts, pnlProductsGridHost, btnProducts);
+            await LoadProductsViewAsync(viewVersion);
         }
 
-        private void btnInventory_Click(object sender, EventArgs e)
+        private async Task ShowInventoryViewAsync()
         {
-            ShowView(pnlInventory);
+            int viewVersion = ShowView(pnlInventory, pnlInventoryGridHost, btnInventory);
+            ResetInventoryControls();
+            await LoadInventoryViewAsync(viewVersion);
+        }
+
+        private void ShowReportsView()
+        {
+            ShowView(pnlReports, pnlReportsGridHost, btnReports);
+            ResetReportsView();
+        }
+
+        private async void btnProducts_Click(object sender, EventArgs e)
+        {
+            await ShowProductsViewAsync();
+        }
+
+        private async void btnInventory_Click(object sender, EventArgs e)
+        {
+            await ShowInventoryViewAsync();
         }
 
         private void btnReports_Click(object sender, EventArgs e)
         {
-            ShowView(pnlReports);
+            ShowReportsView();
         }
 
         private void MoveGridTo(Panel gridHost)
@@ -128,10 +139,8 @@ namespace ClosedAI
 
         private void InitializeButtonVisualState()
         {
-            SetNormalButtonStyle(button1);
             SetNormalButtonStyle(btnTopProducts);
             SetNormalButtonStyle(btnWorstProducts);
-            SetNormalButtonStyle(btnAllProducts);
             SetNormalButtonStyle(btnSearchProduct);
             SetNormalButtonStyle(btnCategoryStats);
             SetNormalButtonStyle(btnRevenueStats);
@@ -162,6 +171,49 @@ namespace ClosedAI
         private void dgvProducts_DataBindingComplete(object? sender, DataGridViewBindingCompleteEventArgs e)
         {
             ApplyGridColumnVisibility();
+        }
+
+        private void ResetDataGridView()
+        {
+            dgvProducts.DataSource = null;
+            dgvProducts.Rows.Clear();
+            dgvProducts.Columns.Clear();
+            dgvProducts.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
+            dgvProducts.ClearSelection();
+            currentDisplayedProducts = new List<dynamic>();
+        }
+
+        private void BindGridData(object dataSource)
+        {
+            dgvProducts.DataSource = null;
+            dgvProducts.Columns.Clear();
+            dgvProducts.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.None;
+            dgvProducts.DataSource = dataSource;
+            ApplyGridColumnVisibility();
+        }
+
+        private bool IsCurrentView(Panel selectedPanel, int viewVersion)
+        {
+            return activeViewVersion == viewVersion && selectedPanel.Visible;
+        }
+
+        private void ResetInventoryControls()
+        {
+            suppressProductSearch = true;
+            txtSearch.Clear();
+            txtDiscount.Clear();
+            suppressProductSearch = false;
+
+            SetNormalButtonStyle(btnSearchProduct);
+            SetNormalButtonStyle(btnPlus);
+            SetNormalButtonStyle(btnMinus);
+            SetNormalButtonStyle(btnApplyDiscount);
+        }
+
+        private void ResetReportsView()
+        {
+            SetNormalButtonStyle(btnCategoryStats);
+            SetNormalButtonStyle(btnRevenueStats);
         }
 
         private void ApplyGridColumnVisibility()
@@ -285,17 +337,29 @@ namespace ClosedAI
             return DateTime.MinValue;
         }
 
-        private async void button1_Click(object sender, EventArgs e)
+        private async Task LoadProductsViewAsync(int viewVersion)
         {
-            SetActiveButton(button1, button1, btnTopProducts, btnWorstProducts);
+            SetNormalButtonStyle(btnTopProducts);
+            SetNormalButtonStyle(btnWorstProducts);
 
             ApiService api = new ApiService();
 
-            allOrders = await api.GetOrders();
+            List<OrderItem> orders = await api.GetOrders();
+
+            if (!IsCurrentView(pnlProducts, viewVersion))
+            {
+                return;
+            }
+
+            allOrders = orders;
             var orderRows = await BuildOrderGridRows(api, allOrders);
 
-            dgvProducts.DataSource = null;
-            dgvProducts.DataSource = orderRows;
+            if (!IsCurrentView(pnlProducts, viewVersion))
+            {
+                return;
+            }
+
+            BindGridData(orderRows);
         }
 
         private async Task<List<OrderGridRow>> BuildOrderGridRows(ApiService api, List<OrderItem> orders)
@@ -429,6 +493,11 @@ namespace ClosedAI
 
         private void txtSearch_TextChanged(object sender, EventArgs e)
         {
+            if (suppressProductSearch || !pnlInventory.Visible)
+            {
+                return;
+            }
+
             ApplyCurrentProductSearch();
         }
 
@@ -448,8 +517,7 @@ namespace ClosedAI
                     .ToList();
             }
 
-            dgvProducts.DataSource = null;
-            dgvProducts.DataSource = filtered;
+            BindGridData(filtered);
         }
 
         private bool ProductMatchesSearch(object? product, string normalizedSearch)
@@ -530,7 +598,7 @@ namespace ClosedAI
                 return;
             }
 
-            SetActiveButton(btnTopProducts, button1, btnTopProducts, btnWorstProducts);
+            SetActiveButton(btnTopProducts, btnTopProducts, btnWorstProducts);
 
             ApiService api = new ApiService();
 
@@ -562,8 +630,7 @@ namespace ClosedAI
 
             currentDisplayedProducts = topProducts.Cast<dynamic>().ToList();
 
-            dgvProducts.DataSource = null;
-            dgvProducts.DataSource = currentDisplayedProducts;
+            BindGridData(currentDisplayedProducts);
         }
 
         private async void btnWorstProducts_Click(object sender, EventArgs e)
@@ -574,7 +641,7 @@ namespace ClosedAI
                 return;
             }
 
-            SetActiveButton(btnWorstProducts, button1, btnTopProducts, btnWorstProducts);
+            SetActiveButton(btnWorstProducts, btnTopProducts, btnWorstProducts);
 
             ApiService api = new ApiService();
 
@@ -606,12 +673,12 @@ namespace ClosedAI
 
             currentDisplayedProducts = worstProducts.Cast<dynamic>().ToList();
 
-            dgvProducts.DataSource = null;
-            dgvProducts.DataSource = currentDisplayedProducts;
+            BindGridData(currentDisplayedProducts);
         }
 
         private async void btnPlus_Click(object sender, EventArgs e)
         {
+            int viewVersion = activeViewVersion;
             SetNormalButtonStyle(btnPlus);
 
             var productIds = new List<string>();
@@ -692,11 +759,17 @@ namespace ClosedAI
                 message += "\n" + createdInventoryCount + " termékhez létrehoztam a hiányzó inventory rekordot.";
             }
 
+            if (successCount > 0)
+            {
+                await LoadInventoryViewAsync(viewVersion);
+            }
+
             MessageBox.Show(message);
         }
 
         private async void btnMinus_Click(object sender, EventArgs e)
         {
+            int viewVersion = activeViewVersion;
             SetNormalButtonStyle(btnMinus);
 
             var productIds = new List<string>();
@@ -776,6 +849,11 @@ namespace ClosedAI
             if (zeroStockCount > 0)
             {
                 message += "\n" + zeroStockCount + " kijelölt termék készlete már 0, ezért nem csökkentettem.";
+            }
+
+            if (successCount > 0)
+            {
+                await LoadInventoryViewAsync(viewVersion);
             }
 
             MessageBox.Show(message);
@@ -902,11 +980,16 @@ namespace ClosedAI
             return false;
         }
 
-        private async void btnAllProducts_Click(object sender, EventArgs e)
+        private async Task LoadInventoryViewAsync(int viewVersion)
         {
             ApiService api = new ApiService();
 
             var products = await api.GetAllProducts();
+
+            if (!IsCurrentView(pnlInventory, viewVersion))
+            {
+                return;
+            }
 
             if (products == null || products.Count == 0)
             {
@@ -916,11 +999,23 @@ namespace ClosedAI
 
             var result = await BuildProductGridRows(api, products);
 
+            if (!IsCurrentView(pnlInventory, viewVersion))
+            {
+                return;
+            }
+
             currentDisplayedProducts = result.Cast<dynamic>().ToList();
 
-            dgvProducts.DataSource = null;
-            dgvProducts.DataSource = currentDisplayedProducts;
-            SetActiveButton(btnAllProducts, btnAllProducts, btnSearchProduct);
+            if (string.IsNullOrWhiteSpace(txtSearch.Text))
+            {
+                BindGridData(currentDisplayedProducts);
+                SetNormalButtonStyle(btnSearchProduct);
+            }
+            else
+            {
+                ApplyCurrentProductSearch();
+                SetActiveButton(btnSearchProduct, btnSearchProduct);
+            }
         }
 
         private async Task<List<ProductGridRow>> BuildProductGridRows(ApiService api, List<ProductResponse> products)
@@ -947,7 +1042,7 @@ namespace ClosedAI
             return result;
         }
 
-        private async void btnSearchProduct_Click_Click(object sender, EventArgs e)
+        private void btnSearchProduct_Click_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtSearch.Text))
             {
@@ -955,33 +1050,13 @@ namespace ClosedAI
                 return;
             }
 
-            string search = NormalizeSearchText(txtSearch.Text);
-
-            ApiService api = new ApiService();
-
-            var products = await api.GetAllProducts();
-
-            var matchingProducts = products
-                .Where(p => ProductMatchesSearch(p, search))
-                .ToList();
-
-            if (matchingProducts.Count == 0)
-            {
-                MessageBox.Show("Nincs a keresésnek megfelelő termék.");
-                return;
-            }
-
-            var result = await BuildProductGridRows(api, matchingProducts);
-
-            currentDisplayedProducts = result.Cast<dynamic>().ToList();
-
-            dgvProducts.DataSource = null;
-            dgvProducts.DataSource = currentDisplayedProducts;
-            SetActiveButton(btnSearchProduct, btnAllProducts, btnSearchProduct);
+            ApplyCurrentProductSearch();
+            SetActiveButton(btnSearchProduct, btnSearchProduct);
         }
 
         private async void btnApplyDiscount_Click(object sender, EventArgs e)
         {
+            int viewVersion = activeViewVersion;
             SetNormalButtonStyle(btnApplyDiscount);
 
             if (!decimal.TryParse(txtDiscount.Text, out decimal discountPercent))
@@ -1060,6 +1135,11 @@ namespace ClosedAI
                     successCount++;
                     UpdateDisplayedProductPrice(productId, newPrice);
                 }
+            }
+
+            if (successCount > 0)
+            {
+                await LoadInventoryViewAsync(viewVersion);
             }
 
             MessageBox.Show(
@@ -1158,10 +1238,9 @@ namespace ClosedAI
                 .OrderByDescending(x => x.TotalRevenue)
                 .ToList();
 
-            dgvProducts.DataSource = null;
-            dgvProducts.DataSource = finalStats;
-            dgvProducts.Columns["TotalRevenue"].DefaultCellStyle.Format = "N0";
-            dgvProducts.Columns["AvgRevenuePerUnit"].DefaultCellStyle.Format = "N0";
+            BindGridData(finalStats);
+            FormatGridColumn("TotalRevenue", "N0");
+            FormatGridColumn("AvgRevenuePerUnit", "N0");
             SetActiveButton(btnCategoryStats, btnCategoryStats, btnRevenueStats);
         }
 
@@ -1271,8 +1350,7 @@ namespace ClosedAI
         }
     };
 
-            dgvProducts.DataSource = null;
-            dgvProducts.DataSource = result;
+            BindGridData(result);
             SetActiveButton(btnRevenueStats, btnCategoryStats, btnRevenueStats);
         }
     }

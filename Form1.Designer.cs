@@ -55,7 +55,6 @@ namespace ClosedAI
             btnSearchProduct = new Button();
             txtSearch = new TextBox();
             lblSku = new Label();
-            btnAllProducts = new Button();
             lblInventoryTitle = new Label();
             pnlProducts = new Panel();
             pnlProductsGridHost = new Panel();
@@ -63,7 +62,6 @@ namespace ClosedAI
             pnlProductsToolbar = new Panel();
             btnWorstProducts = new Button();
             btnTopProducts = new Button();
-            button1 = new Button();
             lblProductsTitle = new Label();
             pnlMenu.SuspendLayout();
             pnlMain.SuspendLayout();
@@ -305,9 +303,9 @@ namespace ClosedAI
             // pnlInventoryGridHost
             // 
             pnlInventoryGridHost.Dock = DockStyle.Fill;
-            pnlInventoryGridHost.Location = new Point(32, 284);
+            pnlInventoryGridHost.Location = new Point(32, 246);
             pnlInventoryGridHost.Name = "pnlInventoryGridHost";
-            pnlInventoryGridHost.Size = new Size(996, 404);
+            pnlInventoryGridHost.Size = new Size(996, 442);
             pnlInventoryGridHost.TabIndex = 2;
             // 
             // pnlInventoryContent
@@ -321,12 +319,11 @@ namespace ClosedAI
             pnlInventoryContent.Controls.Add(btnSearchProduct);
             pnlInventoryContent.Controls.Add(txtSearch);
             pnlInventoryContent.Controls.Add(lblSku);
-            pnlInventoryContent.Controls.Add(btnAllProducts);
             pnlInventoryContent.Dock = DockStyle.Top;
             pnlInventoryContent.Location = new Point(32, 96);
             pnlInventoryContent.Name = "pnlInventoryContent";
             pnlInventoryContent.Padding = new Padding(24);
-            pnlInventoryContent.Size = new Size(996, 188);
+            pnlInventoryContent.Size = new Size(996, 150);
             pnlInventoryContent.TabIndex = 1;
             // 
             // btnApplyDiscount
@@ -337,7 +334,7 @@ namespace ClosedAI
             btnApplyDiscount.FlatStyle = FlatStyle.Flat;
             btnApplyDiscount.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             btnApplyDiscount.ForeColor = Color.FromArgb(22, 37, 33);
-            btnApplyDiscount.Location = new Point(584, 110);
+            btnApplyDiscount.Location = new Point(584, 86);
             btnApplyDiscount.Name = "btnApplyDiscount";
             btnApplyDiscount.Size = new Size(176, 46);
             btnApplyDiscount.TabIndex = 8;
@@ -351,7 +348,7 @@ namespace ClosedAI
             txtDiscount.BorderStyle = BorderStyle.FixedSingle;
             txtDiscount.Font = new Font("Segoe UI", 11F);
             txtDiscount.ForeColor = Color.FromArgb(22, 37, 33);
-            txtDiscount.Location = new Point(350, 115);
+            txtDiscount.Location = new Point(350, 91);
             txtDiscount.Name = "txtDiscount";
             txtDiscount.Size = new Size(208, 37);
             txtDiscount.TabIndex = 7;
@@ -362,7 +359,7 @@ namespace ClosedAI
             lblDiscount.AutoSize = true;
             lblDiscount.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             lblDiscount.ForeColor = Color.FromArgb(255, 253, 152);
-            lblDiscount.Location = new Point(224, 120);
+            lblDiscount.Location = new Point(224, 96);
             lblDiscount.Name = "lblDiscount";
             lblDiscount.Size = new Size(107, 28);
             lblDiscount.TabIndex = 6;
@@ -376,7 +373,7 @@ namespace ClosedAI
             btnMinus.FlatStyle = FlatStyle.Flat;
             btnMinus.Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold);
             btnMinus.ForeColor = Color.FromArgb(22, 37, 33);
-            btnMinus.Location = new Point(104, 110);
+            btnMinus.Location = new Point(104, 86);
             btnMinus.Name = "btnMinus";
             btnMinus.Size = new Size(64, 46);
             btnMinus.TabIndex = 5;
@@ -392,7 +389,7 @@ namespace ClosedAI
             btnPlus.FlatStyle = FlatStyle.Flat;
             btnPlus.Font = new Font("Segoe UI Semibold", 14F, FontStyle.Bold);
             btnPlus.ForeColor = Color.FromArgb(22, 37, 33);
-            btnPlus.Location = new Point(24, 110);
+            btnPlus.Location = new Point(24, 86);
             btnPlus.Name = "btnPlus";
             btnPlus.Size = new Size(64, 46);
             btnPlus.TabIndex = 4;
@@ -408,7 +405,7 @@ namespace ClosedAI
             btnSearchProduct.FlatStyle = FlatStyle.Flat;
             btnSearchProduct.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             btnSearchProduct.ForeColor = Color.FromArgb(22, 37, 33);
-            btnSearchProduct.Location = new Point(584, 24);
+            btnSearchProduct.Location = new Point(454, 24);
             btnSearchProduct.Name = "btnSearchProduct";
             btnSearchProduct.Size = new Size(176, 46);
             btnSearchProduct.TabIndex = 3;
@@ -422,10 +419,10 @@ namespace ClosedAI
             txtSearch.BorderStyle = BorderStyle.FixedSingle;
             txtSearch.Font = new Font("Segoe UI", 11F);
             txtSearch.ForeColor = Color.FromArgb(22, 37, 33);
-            txtSearch.Location = new Point(350, 29);
+            txtSearch.Location = new Point(130, 29);
             txtSearch.Name = "txtSearch";
             txtSearch.PlaceholderText = "SKU, terméknév vagy márka";
-            txtSearch.Size = new Size(208, 37);
+            txtSearch.Size = new Size(300, 37);
             txtSearch.TabIndex = 2;
             txtSearch.TextChanged += txtSearch_TextChanged;
             // 
@@ -434,27 +431,11 @@ namespace ClosedAI
             lblSku.AutoSize = true;
             lblSku.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             lblSku.ForeColor = Color.FromArgb(255, 253, 152);
-            lblSku.Location = new Point(250, 34);
+            lblSku.Location = new Point(24, 34);
             lblSku.Name = "lblSku";
             lblSku.Size = new Size(81, 28);
             lblSku.TabIndex = 1;
             lblSku.Text = "Keresés";
-            // 
-            // btnAllProducts
-            // 
-            btnAllProducts.BackColor = Color.FromArgb(255, 253, 152);
-            btnAllProducts.Cursor = Cursors.Hand;
-            btnAllProducts.FlatAppearance.BorderSize = 0;
-            btnAllProducts.FlatStyle = FlatStyle.Flat;
-            btnAllProducts.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            btnAllProducts.ForeColor = Color.FromArgb(22, 37, 33);
-            btnAllProducts.Location = new Point(24, 24);
-            btnAllProducts.Name = "btnAllProducts";
-            btnAllProducts.Size = new Size(176, 46);
-            btnAllProducts.TabIndex = 0;
-            btnAllProducts.Text = "All Products";
-            btnAllProducts.UseVisualStyleBackColor = false;
-            btnAllProducts.Click += btnAllProducts_Click;
             // 
             // lblInventoryTitle
             // 
@@ -529,7 +510,6 @@ namespace ClosedAI
             // 
             pnlProductsToolbar.Controls.Add(btnWorstProducts);
             pnlProductsToolbar.Controls.Add(btnTopProducts);
-            pnlProductsToolbar.Controls.Add(button1);
             pnlProductsToolbar.Dock = DockStyle.Top;
             pnlProductsToolbar.Location = new Point(32, 96);
             pnlProductsToolbar.Name = "pnlProductsToolbar";
@@ -544,10 +524,10 @@ namespace ClosedAI
             btnWorstProducts.FlatStyle = FlatStyle.Flat;
             btnWorstProducts.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             btnWorstProducts.ForeColor = Color.FromArgb(22, 37, 33);
-            btnWorstProducts.Location = new Point(396, 12);
+            btnWorstProducts.Location = new Point(198, 12);
             btnWorstProducts.Name = "btnWorstProducts";
             btnWorstProducts.Size = new Size(176, 46);
-            btnWorstProducts.TabIndex = 2;
+            btnWorstProducts.TabIndex = 1;
             btnWorstProducts.Text = "Worst Products";
             btnWorstProducts.UseVisualStyleBackColor = false;
             btnWorstProducts.Click += btnWorstProducts_Click;
@@ -560,29 +540,13 @@ namespace ClosedAI
             btnTopProducts.FlatStyle = FlatStyle.Flat;
             btnTopProducts.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
             btnTopProducts.ForeColor = Color.FromArgb(22, 37, 33);
-            btnTopProducts.Location = new Point(198, 12);
+            btnTopProducts.Location = new Point(0, 12);
             btnTopProducts.Name = "btnTopProducts";
             btnTopProducts.Size = new Size(176, 46);
-            btnTopProducts.TabIndex = 1;
+            btnTopProducts.TabIndex = 0;
             btnTopProducts.Text = "Top Products";
             btnTopProducts.UseVisualStyleBackColor = false;
             btnTopProducts.Click += btnTopProducts_Click;
-            // 
-            // button1
-            // 
-            button1.BackColor = Color.FromArgb(255, 253, 152);
-            button1.Cursor = Cursors.Hand;
-            button1.FlatAppearance.BorderSize = 0;
-            button1.FlatStyle = FlatStyle.Flat;
-            button1.Font = new Font("Segoe UI Semibold", 10F, FontStyle.Bold);
-            button1.ForeColor = Color.FromArgb(22, 37, 33);
-            button1.Location = new Point(0, 12);
-            button1.Name = "button1";
-            button1.Size = new Size(176, 46);
-            button1.TabIndex = 0;
-            button1.Text = "Load Orders";
-            button1.UseVisualStyleBackColor = false;
-            button1.Click += button1_Click;
             // 
             // lblProductsTitle
             // 
@@ -640,13 +604,11 @@ namespace ClosedAI
         private Label lblBrand;
         private Label lblProductsTitle;
         private Panel pnlProductsToolbar;
-        private Button button1;
         private Button btnTopProducts;
         private Button btnWorstProducts;
         private DataGridView dgvProducts;
         private Label lblInventoryTitle;
         private Panel pnlInventoryContent;
-        private Button btnAllProducts;
         private Label lblSku;
         private TextBox txtSearch;
         private Button btnSearchProduct;
